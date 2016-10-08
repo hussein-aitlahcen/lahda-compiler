@@ -11,12 +11,12 @@ build_script:
     cd C:\projects\lahda-compiler\src\Lahda\
 
     dotnet restore
-    
+
     dotnet build
 
 test_script:
 - cmd: >-
-    cd C:\projects\EmployeeApp\test\Lahda.Tests\
+    cd C:\projects\lahda-compiler\test\Lahda.Tests\
     
     dotnet restore
 
