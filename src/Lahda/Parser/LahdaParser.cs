@@ -3,11 +3,11 @@ using Lahda.Lexer;
 
 namespace Lahda.Parser
 {
-    public sealed class Parser 
+    public sealed class LahdaParser 
     {
         public ILexer Lexer { get; }
 
-        public Parser(ILexer lexer) 
+        public LahdaParser(ILexer lexer) 
         {
             Lexer = lexer;
         }
