@@ -4,8 +4,9 @@ namespace Lahda.Common
     {
         public static Symbol Unknow = new Symbol("0000", 0);
 
-        public string Identifier { get; }
+        public string Identifier { get; }        
         public ulong Pointer { get; }
+
         public Symbol(string identifier, ulong pointer) 
         {
             Identifier = identifier;

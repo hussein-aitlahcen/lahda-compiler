@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using Lahda.Lexer;
 
 namespace Lahda.Parser
@@ -9,6 +10,10 @@ namespace Lahda.Parser
         public IToken Token { get; }
 
         public IEnumerable<Tree> Childs { get; }
+
+        public Tree(IEnumerable<Tree> args) : this(null, args.ToArray())
+        {
+        }
 
         public Tree(IToken token, params Tree[] args) 
         {

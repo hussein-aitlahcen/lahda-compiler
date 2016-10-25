@@ -18,7 +18,7 @@ namespace Lahda.Tests
             var lexer = new LahdaLexer(codeSource);
             var parser = new LahdaParser(lexer);
 
-            parser.Expression();
+            parser.ArithmeticExpression();
         }
 
         [Theory]
@@ -31,7 +31,30 @@ namespace Lahda.Tests
             var lexer = new LahdaLexer(codeSource);
             var parser = new LahdaParser(lexer);
 
-            Assert.Throws(typeof(InvalidOperationException), parser.Expression);
+            Assert.Throws(typeof(InvalidOperationException), parser.ArithmeticExpression);
+        }
+
+        [Theory]
+        [InlineData("true || false")]
+        [InlineData("false || false")]
+        [InlineData("false || true")]
+        [InlineData("false || false")]
+        [InlineData("true && true")]
+        [InlineData("true && false")]
+        [InlineData("false && true")]
+        [InlineData("false && false")]
+        [InlineData("(1+2) == 3 && false")]
+        [InlineData("(1+2) > 2 && (1/5 == 2)")]
+        [InlineData("(1+2) >= 2 && true && (1/5 <= 2)")]
+        [InlineData("2 + 5 != 7 && x > 2")]
+        [InlineData("x == y && z <= x / 2")]
+        public void Parser_should_parse_boolean_expression(string content)
+        {
+            var codeSource = CodeSource.FromMemory(content);
+            var lexer = new LahdaLexer(codeSource);
+            var parser = new LahdaParser(lexer);
+
+            var expression = parser.BooleanExpression();
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Lahda.Lexer.Impl
 {
@@ -10,8 +11,8 @@ namespace Lahda.Lexer.Impl
         private static Regex RegexIdentifier = new Regex("^([A-Za-z][A-Za-z0-9_]*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static Regex RegexInteger = new Regex("^([0-9]+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static Regex RegexFloating = new Regex("^(((([0-9]+\\.[0-9]*)|([0-9]*\\.[0-9]+))([Ee][+-]?[0-9]+)?)|([0-9]+([Ee][+-]?[0-9]+)))$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static Regex RegexKeyword = new Regex("^(if|for|while|var|int|float|string)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static Regex RegexOperator = new Regex("^(\\+|-|\\*|\\/|%|\\(|\\)|\\^|==|!=|<|>|<=|>=|=)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static Regex RegexKeyword = new Regex("^(if|else|for|while|var|int|float|string|true|false)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static Regex RegexOperator = new Regex("^(\\+|-|\\*|\\/|%|\\(|\\)|\\^|==|!=|<|>|<=|>=|=|\\|\\||\\||&&|&|{|})$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private const char StringDelimiter = '"';
         private const char EscapeChar = '\\';
@@ -132,7 +133,7 @@ namespace Lahda.Lexer.Impl
             }
             else if(RegexFloating.IsMatch(tokenContent))
             {
-                return new ValueToken<float>(TokenType.Floating, position, float.Parse(tokenContent));
+                return new ValueToken<float>(TokenType.Floating, position, float.Parse(tokenContent, CultureInfo.InvariantCulture));
             }
             else if(RegexIdentifier.IsMatch(tokenContent))
             {
