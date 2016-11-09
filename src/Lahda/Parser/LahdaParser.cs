@@ -1,14 +1,28 @@
 using System;
 using System.Collections.Generic;
 using Lahda.Lexer;
+using System.Linq;
 
 namespace Lahda.Parser
 {
-    public sealed class LahdaParser 
+    public enum ArithmeticLevel
+    {
+        Primitive = 0,
+        Divisible,
+        Multiplicative,
+        Additive,
+        And,
+        Or,
+        Comparative,
+        AndAlso,
+        OrElse
+    }
+
+    public sealed class LahdaParser
     {
         public ILexer Lexer { get; }
 
-        public LahdaParser(ILexer lexer) 
+        public LahdaParser(ILexer lexer)
         {
             Lexer = lexer;
         }
@@ -16,27 +30,27 @@ namespace Lahda.Parser
         private IToken PeekToken() => Lexer.PeekToken();
         private IToken NextToken() => Lexer.NextToken();
 
-        public Tree NextExpression() 
+        public Tree NextExpression()
         {
             var token = PeekToken() as ValueToken<string>;
-            switch(token.Type)
+            switch (token.Type)
             {
                 case TokenType.Keyword:
                     return DetermineKeywordExpression(token.Value);
-                
+
                 case TokenType.Identifier:
                     return AssignationExpression();
             }
             throw new InvalidOperationException($"next expression {token.Type}");
         }
 
-        public Tree DetermineKeywordExpression(string keyword) 
+        public Tree DetermineKeywordExpression(string keyword)
         {
-            switch(keyword)
+            switch (keyword)
             {
                 case Keywords.VAR:
                     return DeclarationExpression();
-                
+
                 case Keywords.IF:
                     return ConditionalExpression();
             }
@@ -46,11 +60,11 @@ namespace Lahda.Parser
         public Tree ConditionalExpression()
         {
             var token = NextToken();
-            if(IsOperator(Operators.PARENTHESE_OPEN))
+            if (IsOperator(Operators.PARENTHESE_OPEN))
             {
                 NextToken();
-                var condition = BooleanExpression();
-                if(IsOperator(Operators.PARENTHESE_CLOSE)) 
+                var condition = ArithmeticExpression();
+                if (IsOperator(Operators.PARENTHESE_CLOSE))
                 {
                     NextToken();
 
@@ -58,8 +72,8 @@ namespace Lahda.Parser
                     var trueInstructions = InstructionsBlock();
                     var falseInstructions = new List<Tree>();
 
-                    // second block                  
-                    if(IsKeyword(Keywords.ELSE))
+                    // second block
+                    if (IsKeyword(Keywords.ELSE))
                     {
                         NextToken(); // consume else
                         falseInstructions.AddRange(InstructionsBlock());
@@ -71,16 +85,16 @@ namespace Lahda.Parser
             throw new InvalidOperationException($"conditional expression");
         }
 
-        public IEnumerable<Tree> InstructionsBlock() 
+        public IEnumerable<Tree> InstructionsBlock()
         {
-            if(IsOperator(Operators.BRACE_OPEN))
+            if (IsOperator(Operators.BRACE_OPEN))
             {
                 NextToken(); // consumed brace open
-                while(!IsOperator(Operators.BRACE_CLOSE))
+                while (!IsOperator(Operators.BRACE_CLOSE))
                 {
                     yield return NextExpression();
-                }                 
-                NextToken(); // consumed brace close          
+                }
+                NextToken(); // consumed brace close
             }
             else
             {
@@ -88,116 +102,118 @@ namespace Lahda.Parser
             }
         }
 
-        public Tree DeclarationExpression() 
+        public Tree DeclarationExpression()
         {
             var token = NextToken();
-            if(token.Type != TokenType.Identifier)
+            if (token.Type != TokenType.Identifier)
                 throw new InvalidOperationException($"declaration identifier {token.Type}");
             return null;
         }
 
-        public Tree AssignationExpression() 
+        public Tree AssignationExpression()
         {
             var token = NextToken();
             return null;
         }
 
-        public Tree BooleanExpression()
-        {
-            try
-            {
-                var left = ArithmeticExpression();
-                if(IsOperator(Operators.EQUALS) || 
-                    IsOperator(Operators.NOT_EQUALS) ||
-                    IsOperator(Operators.GREATER) ||
-                    IsOperator(Operators.NOT_GREATER) ||
-                    IsOperator(Operators.LESS) ||
-                    IsOperator(Operators.NOT_LESS)) 
-                {
-                    return new Tree(NextToken(), left, ArithmeticExpression());
-                }
-            }
-            catch(Exception e)
-            {
-            }
+        public Tree ArithmeticExpression() => ArithmeticOperation(ArithmeticLevel.OrElse)();
 
-            var prim = BooleanPrimitive();
-            if(IsOperator(Operators.ANDALSO) || IsOperator(Operators.ORELSE))
+        private Func<Tree> ArithmeticOperation(ArithmeticLevel level)
+        {
+            return () =>
             {
-                return new Tree(NextToken(), prim, BooleanExpression());
-            }
-            return prim;
+                if (level == ArithmeticLevel.Primitive)
+                    return ArithmeticPrimitive();
+
+                return ExecuteIfOperator
+                (
+                    ArithmeticOperation(level - 1)(),
+                    ArithmeticOperation(level),
+                    GetOperators(level)
+                );
+            };
         }
 
-        private Tree BooleanPrimitive()
+        private IEnumerable<string> GetOperators(ArithmeticLevel level)
+        {
+            switch (level)
+            {
+                case ArithmeticLevel.Divisible:
+                    yield return Operators.DIV;
+                    break;
+
+                case ArithmeticLevel.Multiplicative:
+                    yield return Operators.MUL;
+                    break;
+
+                case ArithmeticLevel.Additive:
+                    yield return Operators.ADD;
+                    yield return Operators.SUB;
+                    break;
+
+                case ArithmeticLevel.And:
+                    yield return Operators.AND;
+                    break;
+
+                case ArithmeticLevel.Or:
+                    yield return Operators.OR;
+                    break;
+
+                case ArithmeticLevel.Comparative:
+                    yield return Operators.EQUALS;
+                    yield return Operators.NOT_EQUALS;
+                    yield return Operators.GREATER;
+                    yield return Operators.NOT_GREATER;
+                    yield return Operators.LESS;
+                    yield return Operators.NOT_LESS;
+                    break;
+
+                case ArithmeticLevel.AndAlso:
+                    yield return Operators.ANDALSO;
+                    break;
+
+                case ArithmeticLevel.OrElse:
+                    yield return Operators.ORELSE;
+                    break;
+            }
+        }
+
+        private Tree ExecuteIfOperator(Tree prime, Func<Tree> operation, IEnumerable<string> operators)
+        {
+            if (operators.Any(IsOperator))
+            {
+                return new Tree(NextToken(), prime, operation());
+            }
+            return prime;
+        }
+
+        private Tree ArithmeticPrimitive()
         {
             var token = PeekToken();
-            switch(token.Type)
-            {                
-                case TokenType.Identifier:
-                    return new Tree(NextToken());
-
+            switch (token.Type)
+            {
                 case TokenType.Keyword:
-                    if(IsKeyword(Keywords.TRUE) || IsKeyword(Keywords.FALSE))
+                    if (IsKeyword(Keywords.TRUE))
                     {
-                        return new Tree(NextToken());
+                        return new Tree(new ValueToken<int>(TokenType.Integer, NextToken().Position, 1));
+                    }
+                    else if (IsKeyword(Keywords.FALSE))
+                    {
+                        return new Tree(new ValueToken<int>(TokenType.Integer, NextToken().Position, 0));
                     }
                     break;
-                
-                case TokenType.Operator:
-                    if(IsOperator(Operators.PARENTHESE_OPEN))
-                    {
-                        NextToken(); // Bracket consumed
-                        var exp = BooleanExpression();
-                        if(IsOperator(Operators.PARENTHESE_CLOSE))
-                        {
-                            NextToken(); // Bracket consumed
-                            return exp;
-                        }
-                    }
-                    break;
-            }
-            throw new InvalidOperationException("primitive");
-        }
 
-        public Tree ArithmeticExpression() => ArithmeticAdditive();
-
-        private Tree ArithmeticAdditive()
-        {
-            var mul = ArithmeticMultiplicative();
-            if(IsOperator(Operators.ADD) || IsOperator(Operators.SUB) || IsOperator(Operators.OR)) 
-            {
-                return new Tree(NextToken(), mul, ArithmeticAdditive());
-            }
-            return mul;
-        }
-
-        private Tree ArithmeticMultiplicative() 
-        {
-            var prim = ArithmeticPrimitive();
-            if(IsOperator(Operators.MUL) || IsOperator(Operators.DIV) || IsOperator(Operators.AND))
-            {
-                return new Tree(NextToken(), prim, ArithmeticMultiplicative());
-            }
-            return prim;
-        }
-
-        private Tree ArithmeticPrimitive() 
-        {
-            var token = PeekToken();
-            switch(token.Type)
-            {
                 case TokenType.Floating:
                 case TokenType.Integer:
                 case TokenType.Identifier:
                     return new Tree(NextToken());
-                
+
                 case TokenType.Operator:
-                    if(IsOperator(Operators.PARENTHESE_OPEN))
+                    if (IsOperator(Operators.PARENTHESE_OPEN))
                     {
                         NextToken(); // Bracket consumed
                         var exp = ArithmeticExpression();
-                        if(IsOperator(Operators.PARENTHESE_CLOSE))
+                        if (IsOperator(Operators.PARENTHESE_CLOSE))
                         {
                             NextToken(); // Bracket consumed
                             return exp;
@@ -216,8 +232,8 @@ namespace Lahda.Parser
         {
             var opToken = PeekToken();
             var casted = opToken as ValueToken<T>;
-            return casted != null && 
-                    opToken.Type == type && 
+            return casted != null &&
+                    opToken.Type == type &&
                     casted.Value.Equals(v);
         }
     }

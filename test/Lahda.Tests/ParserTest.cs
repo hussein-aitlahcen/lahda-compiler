@@ -25,7 +25,7 @@ namespace Lahda.Tests
         [InlineData("2+")]
         [InlineData("3**(2+5)/2.e+8")]
         [InlineData("3*((2+5)/2.e+8/.5")]
-        public void Parser_sould_not_parse_invalid_expression(string content) 
+        public void Parser_sould_not_parse_invalid_expression(string content)
         {
             var codeSource = CodeSource.FromMemory(content);
             var lexer = new LahdaLexer(codeSource);
@@ -38,7 +38,7 @@ namespace Lahda.Tests
         [InlineData("true || false")]
         [InlineData("false || false")]
         [InlineData("false || true")]
-        [InlineData("false || false")]
+        [InlineData("true || true")]
         [InlineData("true && true")]
         [InlineData("true && false")]
         [InlineData("false && true")]
@@ -54,7 +54,8 @@ namespace Lahda.Tests
             var lexer = new LahdaLexer(codeSource);
             var parser = new LahdaParser(lexer);
 
-            var expression = parser.BooleanExpression();
+            var expression = parser.ArithmeticExpression();
+            Console.WriteLine(expression.ToString());
         }
     }
 }
