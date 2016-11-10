@@ -5,7 +5,6 @@ namespace Lahda.Lexer
         EOF = -2,
         Unknow = -1,
         Identifier = 0,
-        Integer = 1,
         Floating = 2,
         Keyword = 3,
         Operator = 4,

@@ -7,16 +7,16 @@ namespace Lahda.Tests
 {
     public sealed class LexerTest
     {
-        private ILexer BuildLexer(string content) => 
+        private ILexer BuildLexer(string content) =>
             new LahdaLexer(CodeSource.FromMemory(content));
 
-        private IToken SingleToken(string content) => 
+        private IToken SingleToken(string content) =>
             BuildLexer(content).NextToken();
 
-        private void AssertTokenType(TokenType type, IToken token) => 
+        private void AssertTokenType(TokenType type, IToken token) =>
             Assert.Equal(token.Type, type);
 
-        private void AssertSingleTokenType(TokenType type, string content) => 
+        private void AssertSingleTokenType(TokenType type, string content) =>
             AssertTokenType(type, SingleToken(content));
 
         [Theory]
@@ -44,7 +44,7 @@ namespace Lahda.Tests
         [InlineData("int")]
         [InlineData("float")]
         [InlineData("string")]
-        public void Lexer_should_parse_keyword(string keyword) => 
+        public void Lexer_should_parse_keyword(string keyword) =>
             AssertSingleTokenType(TokenType.Keyword, keyword);
 
         [Theory]
@@ -54,7 +54,7 @@ namespace Lahda.Tests
         [InlineData("6")]
         [InlineData("5632")]
         public void Lexer_should_parse_integer(string value) =>
-            AssertSingleTokenType(TokenType.Integer, value);
+            AssertSingleTokenType(TokenType.Floating, value);
 
 
         [Theory]
@@ -94,39 +94,39 @@ namespace Lahda.Tests
             AssertSingleTokenType(TokenType.Operator, value);
 
         [Theory]
-        [InlineData("(2+5*2)", new [] 
-        { 
-            TokenType.Operator, 
-            TokenType.Integer,
-            TokenType.Operator, 
-            TokenType.Integer, 
+        [InlineData("(2+5*2)", new[]
+        {
             TokenType.Operator,
-            TokenType.Integer,
+            TokenType.Floating,
+            TokenType.Operator,
+            TokenType.Floating,
+            TokenType.Operator,
+            TokenType.Floating,
             TokenType.Operator
         })]
-        [InlineData(".5e+5*2/0.2e-5", new [] 
+        [InlineData(".5e+5*2/0.2e-5", new[]
         {
             TokenType.Floating,
             TokenType.Operator,
-            TokenType.Integer,
+            TokenType.Floating,
             TokenType.Operator,
             TokenType.Floating
         })]
-        [InlineData("var x = .2e+5", new [] 
+        [InlineData("var x = .2e+5", new[]
         {
             TokenType.Keyword,
             TokenType.Identifier,
             TokenType.Operator,
             TokenType.Floating
         })]
-        [InlineData("var y = \"Hello World /**/!\"", new []
+        [InlineData("var y = \"Hello World /**/!\"", new[]
         {
             TokenType.Keyword,
             TokenType.Identifier,
             TokenType.Operator,
             TokenType.String
         })]
-        [InlineData("var empty = \"\"", new [] 
+        [InlineData("var empty = \"\"", new[]
         {
             TokenType.Keyword,
             TokenType.Identifier,
@@ -136,7 +136,7 @@ namespace Lahda.Tests
         public void Lexer_should_parse_expression(string expression, TokenType[] expectedTypes)
         {
             var lexer = BuildLexer(expression);
-            foreach(var expectedType in expectedTypes)
+            foreach (var expectedType in expectedTypes)
             {
                 var token = lexer.NextToken();
                 Assert.Equal(token.Type, expectedType);

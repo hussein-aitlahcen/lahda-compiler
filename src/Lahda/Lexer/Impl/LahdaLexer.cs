@@ -17,7 +17,7 @@ namespace Lahda.Lexer.Impl
         private const char StringDelimiter = '"';
         private const char EscapeChar = '\\';
         private const char NewLine = '\n';
-        private static char[] EscapableCharacters = { '\r', '\t', '\f', ' '};
+        private static char[] EscapableCharacters = { '\r', '\t', '\f', ' ' };
 
         public ICodeSource CodeSource { get; }
 
@@ -53,7 +53,7 @@ namespace Lahda.Lexer.Impl
 
         private bool IsEOF(int position) => position >= CodeSource.Content.Length;
 
-        private void EscapeToNextToken() 
+        private void EscapeToNextToken()
         {
             // escape spaces etc..
             while (!IsEOF() && Escapable(CurrentCharacter))
@@ -65,9 +65,9 @@ namespace Lahda.Lexer.Impl
         private string ParseNextTokenContent()
         {
             var builder = new StringBuilder();
-            while(!IsEOF() && !Escapable(CurrentCharacter))
+            while (!IsEOF() && !Escapable(CurrentCharacter))
             {
-                switch(CurrentCharacter)
+                switch (CurrentCharacter)
                 {
                     case EscapeChar:
                         m_position++;
@@ -81,9 +81,9 @@ namespace Lahda.Lexer.Impl
                         builder.Append(CurrentCharacter);
                         m_position++;
                         var stringEnd = false;
-                        while(!IsEOF() && !stringEnd)
+                        while (!IsEOF() && !stringEnd)
                         {
-                            switch(CurrentCharacter)
+                            switch (CurrentCharacter)
                             {
                                 case EscapeChar:
                                     m_position++;
@@ -104,14 +104,14 @@ namespace Lahda.Lexer.Impl
                     default:
                         builder.Append(CurrentCharacter);
                         break;
-                }     
+                }
                 m_position++;
                 m_column++;
             }
             return builder.ToString();
         }
 
-        private TokenPosition BuildTokenPosition() 
+        private TokenPosition BuildTokenPosition()
         {
             return new TokenPosition(CodeSource, m_line, m_column);
         }
@@ -119,29 +119,33 @@ namespace Lahda.Lexer.Impl
         private IToken DetermineToken(string tokenContent)
         {
             var position = BuildTokenPosition();
-            if(RegexKeyword.IsMatch(tokenContent))
+            if (RegexKeyword.IsMatch(tokenContent))
             {
                 return new ValueToken<string>(TokenType.Keyword, position, tokenContent);
             }
-            else if(RegexOperator.IsMatch(tokenContent))
+            else if (RegexOperator.IsMatch(tokenContent))
             {
                 return new ValueToken<string>(TokenType.Operator, position, tokenContent);
             }
-            else if(RegexInteger.IsMatch(tokenContent))
-            {
-                return new ValueToken<int>(TokenType.Integer, position, int.Parse(tokenContent));
-            }
-            else if(RegexFloating.IsMatch(tokenContent))
+            else if (RegexInteger.IsMatch(tokenContent))
             {
                 return new ValueToken<float>(TokenType.Floating, position, float.Parse(tokenContent, CultureInfo.InvariantCulture));
             }
-            else if(RegexIdentifier.IsMatch(tokenContent))
+            else if (RegexFloating.IsMatch(tokenContent))
+            {
+                return new ValueToken<float>(TokenType.Floating, position, float.Parse(tokenContent, CultureInfo.InvariantCulture));
+            }
+            else if (RegexIdentifier.IsMatch(tokenContent))
             {
                 return new ValueToken<string>(TokenType.Identifier, position, tokenContent);
             }
-            else if(tokenContent.First() == StringDelimiter && tokenContent.Last() == StringDelimiter)
+            else if (tokenContent.First() == StringDelimiter && tokenContent.Last() == StringDelimiter)
             {
                 return new ValueToken<string>(TokenType.String, position, tokenContent.Substring(1, tokenContent.Length - 2));
+            }
+            else if (tokenContent == ";")
+            {
+                return new ValueToken<string>(TokenType.SpecialCharacter, position, tokenContent);
             }
             return new Token(TokenType.Unknow, position);
         }
@@ -158,7 +162,7 @@ namespace Lahda.Lexer.Impl
             var tokenContent = ParseNextTokenContent();
             var tokenSize = tokenContent.Length;
             IToken currentToken = new Token(TokenType.Unknow, BuildTokenPosition());
-            while(tokenSize > 0 && currentToken.Type == TokenType.Unknow)
+            while (tokenSize > 0 && currentToken.Type == TokenType.Unknow)
             {
                 currentToken = DetermineToken(tokenContent.Substring(0, tokenSize));
                 tokenSize--;
@@ -166,7 +170,7 @@ namespace Lahda.Lexer.Impl
 
             m_position -= tokenContent.Length - tokenSize - 1;
 
-            if(currentToken.Type == TokenType.Unknow)
+            if (currentToken.Type == TokenType.Unknow)
                 return ParseAndDetermineNextToken();
 
             return currentToken;
