@@ -8,9 +8,18 @@ namespace Lahda.Parser
     {
         public NodeType Type { get; }
 
-        public AbstractNode(NodeType type, params AbstractNode[] args)
+        public AbstractNode(NodeType type)
         {
             Type = type;
+        }
+
+        public virtual string ToString(int indent)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < indent; i++)
+                sb.Append("\t");
+            sb.Append(ToString());
+            return sb.ToString();
         }
     }
 }

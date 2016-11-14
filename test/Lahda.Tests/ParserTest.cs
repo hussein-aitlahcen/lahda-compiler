@@ -49,7 +49,6 @@ namespace Lahda.Tests
         {
             var parser = GetParser(content);
             var node = parser.ArithmeticExpression();
-            Console.WriteLine(node);
         }
 
         [Theory]
@@ -60,7 +59,6 @@ namespace Lahda.Tests
         {
             var parser = GetParser(content);
             var node = parser.NextExpression();
-            Console.WriteLine(node);
         }
 
         [Theory]
@@ -71,7 +69,6 @@ namespace Lahda.Tests
         {
             var parser = GetParser(content);
             var node = parser.NextExpression();
-            Console.WriteLine(node);
         }
 
         [Theory]
@@ -80,12 +77,20 @@ namespace Lahda.Tests
         {
             var parser = GetParser(content);
             var node = parser.StatementsBlock();
-            Console.WriteLine(node);
         }
 
         [Theory]
         [InlineData("if(x > 2 && 3 && m_index <= z) { var yo = 2; yo = yo / 4; } else { z = 211111; }")]
         public void Parser_should_parse_conditional(string content)
+        {
+            var parser = GetParser(content);
+            var node = parser.NextExpression();
+        }
+
+        [Theory]
+        [InlineData("for(var i = 0; i < 5; i = i + 1) { var x = 2; x = x + 2; }")]
+        [InlineData("while(y < 5) { x = x * 5; y = y + 1; }")]
+        public void Parser_should_parse_loops(string content)
         {
             var parser = GetParser(content);
             var node = parser.NextExpression();

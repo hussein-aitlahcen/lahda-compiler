@@ -1,13 +1,18 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Lahda.Parser.Impl
 {
-    public sealed class BlockNode : AbstractNode
+    public sealed class BlockNode : AbstractStatementNode
     {
         public List<AbstractStatementNode> Statements { get; }
 
         public BlockNode() : this(new AbstractStatementNode[] { })
+        {
+        }
+
+        public BlockNode(params AbstractStatementNode[] nodes) : this(nodes.ToList())
         {
         }
 
@@ -16,14 +21,14 @@ namespace Lahda.Parser.Impl
             Statements = new List<AbstractStatementNode>(statements);
         }
 
-        public override string ToString()
+        public override string ToString(int indent)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("SCOPE {");
-            foreach (var stmt in Statements)
-                sb.AppendLine("\t" + stmt);
-            sb.AppendLine("}");
+            foreach (var statement in Statements)
+                sb.AppendLine(statement.ToString(indent));
             return sb.ToString();
         }
+
+        public override string ToString() => ToString(0);
     }
 }

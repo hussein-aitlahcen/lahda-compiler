@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Lahda.Parser.Impl
 {
     public sealed class ConditionalNode : AbstractStatementNode
@@ -13,6 +15,20 @@ namespace Lahda.Parser.Impl
             FalseStatements = falseStatements;
         }
 
-        public override string ToString() => $"IF {Expression} THEN\n{TrueStatements}\nELSE\n{FalseStatements}";
+        public override string ToString(int indent)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < indent; i++)
+                sb.Append("\t");
+            sb.AppendLine($"IF {Expression} THEN");
+            sb.AppendLine(TrueStatements.ToString(indent + 1));
+            for (int i = 0; i < indent; i++)
+                sb.Append("\t");
+            sb.AppendLine("ELSE");
+            sb.AppendLine(FalseStatements.ToString(indent + 1));
+            return sb.ToString();
+        }
+
+        public override string ToString() => ToString(0);
     }
 }

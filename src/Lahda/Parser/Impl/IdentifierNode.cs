@@ -9,6 +9,6 @@ namespace Lahda.Parser.Impl
             Value = v;
         }
 
-        public override string ToString() => $"[{Value}]";
+        public override string ToString() => $"{Value}";
     }
 }

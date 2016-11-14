@@ -37,7 +37,7 @@ namespace Lahda.Parser
                     return DetermineKeywordExpression(token.Value);
 
                 case TokenType.Identifier:
-                    return AssignationExpression();
+                    return Statement(AssignationExpression);
             }
             throw new InvalidOperationException($"next expression {token.Type}");
         }
@@ -47,7 +47,7 @@ namespace Lahda.Parser
             switch (keyword)
             {
                 case Keywords.VAR:
-                    return DeclarationExpression();
+                    return Statement(DeclarationExpression);
 
                 case Keywords.WHILE:
                 case Keywords.FOR:
@@ -59,9 +59,53 @@ namespace Lahda.Parser
             throw new InvalidOperationException($"keyword expression {keyword}");
         }
 
-        public AbstractLoopNode LoopExpression()
+        public AbstractStatementNode LoopExpression()
         {
-            return null;
+            if (IsKeyword(Keywords.WHILE))
+            {
+                return WhileExpression();
+            }
+            else if (IsKeyword(Keywords.FOR))
+            {
+                return ForExpression();
+            }
+            throw new InvalidOperationException("unknow loop keyword");
+        }
+
+        public AbstractStatementNode WhileExpression()
+        {
+            NextToken();
+            if (IsOperator(Operators.PARENTHESE_OPEN))
+            {
+                NextToken();
+                var exp = ArithmeticExpression();
+                if (IsOperator(Operators.PARENTHESE_CLOSE))
+                {
+                    NextToken();
+                    var block = StatementsBlock();
+                    return new LoopNode(exp, block);
+                }
+            }
+            throw new InvalidOperationException("invalid while expression");
+        }
+
+        public AbstractStatementNode ForExpression()
+        {
+            NextToken();
+            if (IsOperator(Operators.PARENTHESE_OPEN))
+            {
+                NextToken();
+                var initialization = Statement(DeclarationExpression);
+                var condition = Statement(ArithmeticExpression);
+                var iteration = AssignationExpression();
+                if (IsOperator(Operators.PARENTHESE_CLOSE))
+                {
+                    NextToken();
+                    var block = StatementsBlock();
+                    return new BlockNode(initialization, new LoopNode(condition, new BlockNode(block, iteration)));
+                }
+            }
+            throw new InvalidOperationException("invalid for expression");
         }
 
         public ConditionalNode ConditionalExpression()
@@ -126,9 +170,14 @@ namespace Lahda.Parser
 
             var expression = ArithmeticExpression();
 
-            EnsureEndOfStatement();
-
             return new DeclarationNode(new IdentifierNode(ident.Value), expression);
+        }
+
+        public T Statement<T>(Func<T> fun)
+        {
+            T expression = fun();
+            EnsureEndOfStatement();
+            return expression;
         }
 
         public AssignationNode AssignationExpression()
@@ -143,8 +192,6 @@ namespace Lahda.Parser
                 throw new InvalidOperationException($"assignation operator {op.Type}");
 
             var expression = ArithmeticExpression();
-
-            EnsureEndOfStatement();
 
             return new AssignationNode(new IdentifierNode(ident.Value), expression);
         }
