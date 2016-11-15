@@ -11,7 +11,7 @@ namespace Lahda.Lexer.Impl
         private static Regex RegexIdentifier = new Regex("^([A-Za-z][A-Za-z0-9_]*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static Regex RegexInteger = new Regex("^([0-9]+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static Regex RegexFloating = new Regex("^(((([0-9]+\\.[0-9]*)|([0-9]*\\.[0-9]+))([Ee][+-]?[0-9]+)?)|([0-9]+([Ee][+-]?[0-9]+)))$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static Regex RegexKeyword = new Regex("^(if|else|for|while|var|int|float|string|true|false)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static Regex RegexKeyword = new Regex("^(if|else|for|while|do|until|forever|break|reset|continue|poor|var|int|float|string|true|false)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static Regex RegexOperator = new Regex("^(\\+|-|\\*|\\/|%|\\(|\\)|\\^|==|!=|<|>|<=|>=|=|\\|\\||\\||&&|&|{|})$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private const char StringDelimiter = '"';

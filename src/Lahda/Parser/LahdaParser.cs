@@ -51,6 +51,7 @@ namespace Lahda.Parser
 
                 case Keywords.WHILE:
                 case Keywords.FOR:
+                case Keywords.DO:
                     return LoopExpression();
 
                 case Keywords.IF:
@@ -69,7 +70,51 @@ namespace Lahda.Parser
             {
                 return ForExpression();
             }
+            else if (IsKeyword(Keywords.DO))
+            {
+                return Statement(DoExpression);
+            }
             throw new InvalidOperationException("unknow loop keyword");
+        }
+
+        public AbstractStatementNode DoExpression()
+        {
+            NextToken();
+            var block = StatementsBlock();
+            if (IsKeyword(Keywords.WHILE))
+            {
+                NextToken();
+                if (IsOperator(Operators.PARENTHESE_OPEN))
+                {
+                    NextToken();
+                    var exp = ArithmeticExpression();
+                    if (IsOperator(Operators.PARENTHESE_CLOSE))
+                    {
+                        NextToken();
+                        return new LoopNode(exp, block);
+                    }
+                }
+            }
+            else if (IsKeyword(Keywords.UNTIL))
+            {
+                NextToken();
+                if (IsOperator(Operators.PARENTHESE_OPEN))
+                {
+                    NextToken();
+                    var exp = ArithmeticExpression();
+                    if (IsOperator(Operators.PARENTHESE_CLOSE))
+                    {
+                        NextToken();
+                        return new LoopNode(exp, block, true);
+                    }
+                }
+            }
+            else if (IsKeyword(Keywords.FOREVER))
+            {
+                NextToken();
+                return new LoopNode(new LiteralNode(1), block);
+            }
+            throw new InvalidOperationException("invalid do expression");
         }
 
         public AbstractStatementNode WhileExpression()
@@ -223,6 +268,7 @@ namespace Lahda.Parser
                     break;
 
                 case ArithmeticLevel.Multiplicative:
+                    yield return Operators.MOD;
                     yield return Operators.MUL;
                     break;
 

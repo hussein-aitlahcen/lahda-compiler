@@ -6,9 +6,19 @@ namespace Lahda.Parser.Impl
     {
         public AbstractStatementNode StmtsBlock { get; }
 
-        public LoopNode(AbstractExpressionNode condition, BlockNode stmts)
+        public LoopNode(AbstractExpressionNode condition, BlockNode stmts, bool reverse = false)
+         : this
+         (
+            condition,
+            reverse ? new BlockNode(ConcreteNode.BREAK) : stmts,
+            reverse ? stmts : new BlockNode(ConcreteNode.BREAK)
+        )
         {
-            StmtsBlock = new ConditionalNode(condition, stmts, new BlockNode(ConcreteNode.BREAK));
+        }
+
+        public LoopNode(AbstractExpressionNode condition, BlockNode trueStmts, BlockNode falseStmts)
+        {
+            StmtsBlock = new ConditionalNode(condition, trueStmts, falseStmts);
         }
 
         public override string ToString(int indent)
