@@ -241,7 +241,7 @@ namespace Lahda.Parser
             return new AssignationNode(new IdentifierNode(ident.Value), expression);
         }
 
-        public AbstractExpressionNode ArithmeticExpression() => ArithmeticOperation(ArithmeticLevel.OrElse)();
+        public AbstractExpressionNode ArithmeticExpression() => ArithmeticOperation(ArithmeticLevel.LogicalOr)();
 
         private Func<AbstractExpressionNode> ArithmeticOperation(ArithmeticLevel level)
         {
@@ -277,11 +277,11 @@ namespace Lahda.Parser
                     yield return Operators.SUB;
                     break;
 
-                case ArithmeticLevel.And:
+                case ArithmeticLevel.BitwiseAnd:
                     yield return Operators.AND;
                     break;
 
-                case ArithmeticLevel.Or:
+                case ArithmeticLevel.BitwiseOr:
                     yield return Operators.OR;
                     break;
 
@@ -294,11 +294,11 @@ namespace Lahda.Parser
                     yield return Operators.NOT_LESS;
                     break;
 
-                case ArithmeticLevel.AndAlso:
+                case ArithmeticLevel.LogicalAnd:
                     yield return Operators.ANDALSO;
                     break;
 
-                case ArithmeticLevel.OrElse:
+                case ArithmeticLevel.LogicalOr:
                     yield return Operators.ORELSE;
                     break;
             }

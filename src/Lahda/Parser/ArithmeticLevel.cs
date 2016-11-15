@@ -6,10 +6,10 @@ namespace Lahda.Parser
         Divisible,
         Multiplicative,
         Additive,
-        And,
-        Or,
+        BitwiseAnd,
+        BitwiseOr,
         Comparative,
-        AndAlso,
-        OrElse
+        LogicalAnd,
+        LogicalOr
     }
 }
