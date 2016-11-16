@@ -2,8 +2,13 @@ namespace Lahda.Parser.Impl
 {
     public sealed class ContinueNode : AbstractStatementNode
     {
-        public ContinueNode() : base(NodeType.Continue)
+        public LoopNode Parent { get; }
+
+        public override uint Id => Parent.Id;
+
+        public ContinueNode(LoopNode parent) : base(NodeType.Continue)
         {
+            Parent = parent;
         }
 
         public override string ToString() => $"CONTINUE";

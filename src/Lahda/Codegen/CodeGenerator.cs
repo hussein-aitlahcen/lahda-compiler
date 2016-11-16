@@ -120,7 +120,6 @@ namespace Lahda.Codegen
                 case NodeType.Declaration:
                     var decl = (DeclarationNode)state.Node;
                     decl.Identifier.Symbol.Pointer = VarId++;
-                    Append(state, "");
                     Append(state, ";----------");
                     Append(state, $"; var {decl.Identifier.Symbol.Name} = {decl.Expression}");
                     Append(state, ";----------");
@@ -131,7 +130,6 @@ namespace Lahda.Codegen
 
                 case NodeType.Assignation:
                     var assign = (AssignationNode)state.Node;
-                    Append(state, "");
                     Append(state, ";----------");
                     Append(state, $"; {assign.Identifier.Symbol.Name} = {assign.Expression}");
                     Append(state, ";----------");
@@ -152,9 +150,8 @@ namespace Lahda.Codegen
                 case NodeType.Loop:
                     var loop = (LoopNode)state.Node;
                     loop.Id = LabelId++;
-                    Append(state, "");
                     Append(state, ";----------");
-                    Append(state, $"; LOOP");
+                    Append(state, $"; loop_{loop.Id}");
                     Append(state, ";----------");
                     BeginLoop(state, loop.Id);
                     Generate(state.Copy(loop.StmtsBlock, state.IndentationLevel + 1));
@@ -162,45 +159,45 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Break:
-                    BreakLoop(state, state.ParentNode.Id);
+                    BreakLoop(state, state.Node.Id);
                     break;
 
                 case NodeType.Continue:
-                    ContinueLoop(state, state.ParentNode.Id);
+                    ContinueLoop(state, state.Node.Id);
                     break;
 
                 case NodeType.Conditional:
                     var cond = (ConditionalNode)state.Node;
                     cond.Id = LabelId++;
                     Generate(state.Copy(cond.Expression));
-                    Append(state, $"jumpf ifnot{cond.Id}");
+                    Append(state, $"jumpf ifnot_{cond.Id}");
                     Generate(state.Copy(cond.TrueStatements));
-                    Append(state, $"jump endif{cond.Id}");
-                    Append(state, $".ifnot{cond.Id}");
+                    Append(state, $"jump endif_{cond.Id}");
+                    Append(state, $".ifnot_{cond.Id}");
                     Generate(state.Copy(cond.FalseStatements));
-                    Append(state, $".endif{cond.Id}");
+                    Append(state, $".endif_{cond.Id}");
                     break;
             }
         }
 
         private void BreakLoop(GenerationState state, uint level)
         {
-            Append(state, $"jump end_loop{level}");
+            Append(state, $"jump end_loop_{level}");
         }
 
         private void ContinueLoop(GenerationState state, uint level)
         {
-            Append(state, $"jump begin_loop{level}");
+            Append(state, $"jump begin_loop_{level}");
         }
 
         private void BeginLoop(GenerationState state, uint level)
         {
-            Append(state, $".begin_loop{level}");
+            Append(state, $".begin_loop_{level}");
         }
 
         private void EndLoop(GenerationState state, uint level)
         {
-            Append(state, $".end_loop{level}");
+            Append(state, $".end_loop_{level}");
         }
 
         private void Append(GenerationState state, string v)

@@ -10,8 +10,8 @@ namespace Lahda.Parser.Impl
 
         public LoopNode(AbstractExpressionNode condition, BlockNode code, bool reverse = false)
         {
-            var brk = new BlockNode(new BreakNode());
-            var cont = new BlockNode(code, new ContinueNode());
+            var brk = new BlockNode(new BreakNode(this));
+            var cont = new BlockNode(code, new ContinueNode(this));
             var trueStmts = reverse ? brk : cont;
             var falseStmts = reverse ? cont : brk;
             StmtsBlock = new ConditionalNode(condition, trueStmts, falseStmts);
