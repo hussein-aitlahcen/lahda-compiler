@@ -169,11 +169,21 @@ namespace Lahda.Codegen
                 case NodeType.Conditional:
                     var cond = (ConditionalNode)state.Node;
                     cond.Id = LabelId++;
+                    Append(state, ";----------");
+                    Append(state, $"; if {cond.Expression}");
+                    Append(state, ";----------");
                     Generate(state.Copy(cond.Expression));
                     Append(state, $"jumpf ifnot_{cond.Id}");
+
+                    Append(state, ";------");
+                    Append(state, $"; then");
+                    Append(state, ";------");
                     Generate(state.Copy(cond.TrueStatements));
                     Append(state, $"jump endif_{cond.Id}");
                     Append(state, $".ifnot_{cond.Id}");
+                    Append(state, ";------");
+                    Append(state, $"; else");
+                    Append(state, ";------");
                     Generate(state.Copy(cond.FalseStatements));
                     Append(state, $".endif_{cond.Id}");
                     break;
