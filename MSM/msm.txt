@@ -1,0 +1,82 @@
+
+Jeu d'instruction:
+==================
+
+  halt
+    Termine l'exécution du programme.
+
+Manipulation de la pile:
+------------------------
+
+  push.i [int]
+  push.f [float]
+    Empile une constante entière/réelle au sommet de la pile.
+
+  get [int]
+    Empile une copie de la N-ième valeur depuis la base de la pile au sommet de
+    celle-ci.
+
+  set [int]
+    Dépile la valeur au sommet de la pile et l'affecte à la N-ième valeur depuis
+    la base de la pile.
+
+Arithmétique et logique:
+------------------------
+
+  add.i / sub.i / mul.i / div.i / mod.i
+    Dépile deux valeurs entières du haut de la pile, applique l'opération
+    correspondante et empile le résultat. Attention, pour réaliser l'opération
+    A-B par exemple, la valeur de A doit être empilée en premier suivie de la
+    valeur de B.
+
+  add.f / sub.f / mul.f / div.f
+    Instruction similaires aux précédentes mais réalisant les calculs sur des
+    réels.
+
+  not
+    Négation logique du sommet de la pile. Dépile une valeur entière puis empile
+    0 si cette dernière en non-nulle et 1 sinon.
+
+  and / or
+    réalise l'operation logique entre les deux valeurs entières au sommet de la
+    pile.
+
+  itof / ftoi
+    Convertis la valeur au sommet de la pile d'un entier vers un réel et
+    inversement.
+
+Comparaisons:
+-------------
+
+  cmpeq.i / cmpne.i / cmplt.i / cmple.i / cmpgt.i / cmpge.i
+    Dépile deux valeurs du sommet de la pile et empile le résultat de la
+    comparaison des deux :
+        cmpeq.i  ->  A == B
+        cmpne.i  ->  A != B
+        cmplt.i  ->  A <  B
+        cmple.i  ->  A <= B
+        cmpgt.i  ->  A >  B
+        cmpge.i  ->  A >= B
+
+  cmpeq.f / cmpne.f / cmplt.f / cmple.f / cmpgt.f / cmpge.f
+    Réalise la même chose mais avec des valeurs réelles.
+
+Branchements:
+-------------
+
+  jump [label]
+    Saut inconditionel à l'adresse indiquée.
+
+  jumpt / jumpf [label]
+    Saut conditionel. Dépile une valeur entière du sommet de la pile, si elle
+    est differente (resp. egale) de zéro, saute à l'adresse indiquée, sinon
+    continue l'exécution à l'instruction suivante.
+
+Communication:
+--------------
+
+  out.i / out.f / out.c:
+    Dépile la valeur au sommet de la pile et l'affiche sur la console sous la
+    forme d'un entier, d'un réel ou d'un caractère.
+
+
