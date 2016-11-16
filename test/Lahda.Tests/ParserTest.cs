@@ -43,8 +43,7 @@ namespace Lahda.Tests
         [InlineData("(1+2) == 3 && false")]
         [InlineData("(1+2) > 2 && (1/5 == 2)")]
         [InlineData("(1+2) >= 2 && true && (1/5 <= 2)")]
-        [InlineData("2 + 5 != 7 && x > 2")]
-        [InlineData("x == y && z <= x / 2")]
+        [InlineData("2 + 5 != 7 && 1 > 2")]
         public void Parser_should_parse_boolean_expression(string content)
         {
             var parser = GetParser(content);
@@ -52,9 +51,9 @@ namespace Lahda.Tests
         }
 
         [Theory]
-        [InlineData("y = 2;")]
-        [InlineData("m_currentIndex = 8*y;")]
-        [InlineData("i = x + y + z * 2;")]
+        [InlineData("var y = 2; y = 5;")]
+        [InlineData("var m_currentIndex = 8; m_currentIndex = m_currentIndex + 8;")]
+        [InlineData("var i = 1; i = 0;")]
         public void Parser_should_parse_assignations(string content)
         {
             var parser = GetParser(content);
@@ -63,8 +62,8 @@ namespace Lahda.Tests
 
         [Theory]
         [InlineData("var m_index = 6;")]
-        [InlineData("var i = j * 9;")]
-        [InlineData("var z = 9 * i + 2;")]
+        [InlineData("var i = 9;")]
+        [InlineData("var z = 9 * 2;")]
         public void Parser_should_parse_declarations(string content)
         {
             var parser = GetParser(content);
@@ -80,7 +79,7 @@ namespace Lahda.Tests
         }
 
         [Theory]
-        [InlineData("if(x > 2 && 3 && m_index <= z) { var yo = 2; yo = yo / 4; } else { z = 211111; }")]
+        [InlineData("var x = 1; var z = 2; if(x > 2 && 3 && m_index <= z) { var yo = 2; yo = yo / 4; } else { z = 211111; }")]
         public void Parser_should_parse_conditional(string content)
         {
             var parser = GetParser(content);
@@ -89,15 +88,25 @@ namespace Lahda.Tests
 
         [Theory]
         [InlineData("for(var i = 0; i < 5; i = i + 1) { var x = 2; x = x + 2; }")]
-        [InlineData("while(y < 5) { x = x * 5; y = y + 1; }")]
-        [InlineData("do { x = x + 2; } while(3);")]
-        [InlineData("do { yo = 2; } until(5 == 5);")]
-        [InlineData("do { mdr = mdr / 2 % 5; } forever;")]
+        [InlineData("var y = 2; while(y < 5) { var x = x * 5; y = y + 1; }")]
+        [InlineData("do { var x = 1 + 2; } while(3);")]
+        [InlineData("do { var yo = 2; } until(5 == 5);")]
+        [InlineData("do { var mdr = 2 / 2 % 5; } forever;")]
         public void Parser_should_parse_loops(string content)
         {
             var parser = GetParser(content);
             var node = parser.NextExpression();
-            Console.WriteLine(node);
+        }
+
+        [Theory]
+        [InlineData("{ var x = 5; x = y + 2; }")]
+        [InlineData("{ x = 5; }")]
+        [InlineData("{ var x = 5; y = x * 5; }")]
+        [InlineData("{ var x = 5; { x = 8; var y = 2; y = y + 2; } y = 8; }")]
+        public void Parser_should_fire_unknow_symbol(string content)
+        {
+            var parser = GetParser(content);
+            Assert.Throws(typeof(InvalidOperationException), parser.StatementsBlock);
         }
     }
 }

@@ -1,14 +1,16 @@
+using Lahda.Common;
+
 namespace Lahda.Parser.Impl
 {
     public sealed class IdentifierNode : AbstractExpressionNode
     {
-        public string Value { get; }
+        public Symbol Symbol { get; }
 
-        public IdentifierNode(string v) : base(NodeType.Identifier)
+        public IdentifierNode(Symbol symbol) : base(NodeType.Identifier)
         {
-            Value = v;
+            Symbol = symbol;
         }
 
-        public override string ToString() => $"{Value}";
+        public override string ToString() => $"{Symbol.Name}";
     }
 }

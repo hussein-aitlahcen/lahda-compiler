@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Lahda.Lexer;
 using System.Linq;
 using Lahda.Parser.Impl;
+using Lahda.Common;
 
 namespace Lahda.Parser
 {
@@ -10,9 +11,12 @@ namespace Lahda.Parser
     {
         public ILexer Lexer { get; }
 
+        public SymbolTable Symbols { get; }
+
         public LahdaParser(ILexer lexer)
         {
             Lexer = lexer;
+            Symbols = new SymbolTable();
         }
 
         private IToken PeekToken() => Lexer.PeekToken();
@@ -33,6 +37,10 @@ namespace Lahda.Parser
             var token = PeekToken() as ValueToken<string>;
             switch (token.Type)
             {
+                case TokenType.Operator:
+                    if (token.Value == Operators.BRACE_OPEN)
+                        return StatementsBlock();
+                    break;
                 case TokenType.Keyword:
                     return DetermineKeywordExpression(token.Value);
 
@@ -74,7 +82,7 @@ namespace Lahda.Parser
             {
                 return Statement(DoExpression);
             }
-            throw new InvalidOperationException("unknow loop keyword");
+            throw new InvalidOperationException("unknow loop type");
         }
 
         public AbstractStatementNode DoExpression()
@@ -183,6 +191,7 @@ namespace Lahda.Parser
 
         public BlockNode StatementsBlock()
         {
+            Symbols.PushScope();
             var expressions = new List<AbstractStatementNode>();
             if (IsOperator(Operators.BRACE_OPEN))
             {
@@ -197,7 +206,15 @@ namespace Lahda.Parser
             {
                 throw new Exception("instruction block");
             }
+            Symbols.PopScope();
             return new BlockNode(expressions);
+        }
+
+        public T Statement<T>(Func<T> fun)
+        {
+            T expression = fun();
+            EnsureEndOfStatement();
+            return expression;
         }
 
         public DeclarationNode DeclarationExpression()
@@ -215,14 +232,15 @@ namespace Lahda.Parser
 
             var expression = ArithmeticExpression();
 
-            return new DeclarationNode(new IdentifierNode(ident.Value), expression);
-        }
+            var symbol = Symbols.Search(ident.Value);
+            if (!symbol.IsUnknow)
+            {
+                throw new InvalidOperationException($"symbol already defined {ident.Value}");
+            }
 
-        public T Statement<T>(Func<T> fun)
-        {
-            T expression = fun();
-            EnsureEndOfStatement();
-            return expression;
+            Symbols.DefineSymbol(symbol = new Symbol(ident.Value));
+
+            return new DeclarationNode(new IdentifierNode(symbol), expression);
         }
 
         public AssignationNode AssignationExpression()
@@ -236,9 +254,15 @@ namespace Lahda.Parser
             if (op.Type != TokenType.Operator)
                 throw new InvalidOperationException($"assignation operator {op.Type}");
 
+            var symbol = Symbols.Search(ident.Value);
+            if (symbol.IsUnknow)
+            {
+                throw new InvalidOperationException($"unknow symbol {ident.Value}");
+            }
+
             var expression = ArithmeticExpression();
 
-            return new AssignationNode(new IdentifierNode(ident.Value), expression);
+            return new AssignationNode(new IdentifierNode(symbol), expression);
         }
 
         public AbstractExpressionNode ArithmeticExpression() => ArithmeticOperation(ArithmeticLevel.LogicalOr)();
@@ -331,12 +355,17 @@ namespace Lahda.Parser
                     }
                     break;
 
-                // TODO: coerce int -> float in lexer
                 case TokenType.Floating:
                     return new LiteralNode(((ValueToken<float>)NextToken()).Value);
 
                 case TokenType.Identifier:
-                    return new IdentifierNode(((ValueToken<string>)NextToken()).Value);
+                    var ident = ((ValueToken<string>)NextToken()).Value;
+                    var symbol = Symbols.Search(ident);
+                    if (symbol.IsUnknow)
+                    {
+                        throw new InvalidOperationException($"unknow symbol {ident}");
+                    }
+                    return new IdentifierNode(symbol);
 
                 case TokenType.Operator:
                     if (IsOperator(Operators.PARENTHESE_OPEN))
@@ -354,6 +383,7 @@ namespace Lahda.Parser
             throw new InvalidOperationException("arithmetic primitive");
         }
 
+        private bool IsType(TokenType type) => PeekToken().Type == type;
         private bool IsKeyword(string op) => IsValue<string>(TokenType.Keyword, op);
 
         private bool IsOperator(string op) => IsValue<string>(TokenType.Operator, op);

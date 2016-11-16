@@ -11,6 +11,7 @@ namespace Lahda.Common
         public SymbolTable()
         {
             m_scopes = new Stack<SymbolScope>();
+            PushScope(); // rootScope
         }
 
         public void PushScope() => m_scopes.Push(new SymbolScope());
@@ -23,19 +24,19 @@ namespace Lahda.Common
 
         public void DefineSymbol(Symbol symbol)
         {
-            if(CurrentScope().ContainsKey(symbol.Identifier))
-                throw new InvalidOperationException($"identifier already defined for {symbol.Identifier}");
-            CurrentScope().Add(symbol.Identifier, symbol);
+            if (CurrentScope().ContainsKey(symbol.Name))
+                throw new InvalidOperationException($"identifier already defined for {symbol.Name}");
+            CurrentScope().Add(symbol.Name, symbol);
         }
 
         public Symbol Search(string identifier)
         {
             var symbol = Symbol.Unknow;
             var i = m_scopes.Count - 1;
-            while(i >= 0 && symbol.IsUnknow)
+            while (i >= 0 && symbol.IsUnknow)
             {
                 var scope = GetScope(i);
-                if(scope.ContainsKey(identifier))
+                if (scope.ContainsKey(identifier))
                     symbol = scope[identifier];
                 i--;
             }

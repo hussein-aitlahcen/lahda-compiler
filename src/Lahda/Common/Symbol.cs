@@ -1,18 +1,17 @@
 namespace Lahda.Common
 {
-    public sealed class Symbol 
+    public sealed class Symbol
     {
-        public static Symbol Unknow = new Symbol("0000", 0);
+        public static Symbol Unknow = new Symbol("0000");
 
-        public string Identifier { get; }        
-        public ulong Pointer { get; }
+        public string Name { get; }
+        public ulong Pointer { get; set; }
 
-        public Symbol(string identifier, ulong pointer) 
+        public Symbol(string name)
         {
-            Identifier = identifier;
-            Pointer = pointer;
+            Name = name;
         }
 
-        public bool IsUnknow => Identifier == Unknow.Identifier;
+        public bool IsUnknow => Name == Unknow.Name;
     }
 }
