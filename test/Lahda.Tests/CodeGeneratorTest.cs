@@ -9,8 +9,7 @@ namespace Lahda.Tests
     public sealed class CodeGeneratorTest
     {
         [Theory]
-        [InlineData("{ var i = 5; var s = 1; for(var x = 1; x <= i; x = x + 1) { s = s * x; } }")]
-        [InlineData("{ var x = 50; var y = 0; if(y <= 0) { y = 1; } while(y < x) { y = y * (y + 1); } }")]
+        [InlineData("{ var a = 1; var b = a + 2 + 3 || 2 % 5 < 2 % 4 + 2 - 1; { var c = 3; var d = 4; } var f = 6; { var e = 5; } }")]
         public void CodeGenerator_should_generate_godlike_code(string content)
         {
             var codeSource = CodeSource.FromMemory(content);

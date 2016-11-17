@@ -1,49 +1,32 @@
 .start
-    ;----------
-    ; var x = 50
-    ;----------
-    push.f 0
-    push.f 50
-    set 0
-    ;----------
-    ; var y = 0
-    ;----------
-    push.f 0
-    push.f 0
-    set 1
-    get 1
-    push.f 0
-    cmple.f
-    jumpf ifnot_0
-      ;----------
-      ; y = 1
-      ;----------
-      push.f 1
-      set 1
-    jump endif_0
-    .ifnot_0
-    .endif_0
-    ;----------
-    ; loop_1
-    ;----------
-    .begin_loop_1
-      get 1
-      get 0
-      cmplt.f
-      jumpf ifnot_2
-          ;----------
-          ; y = (y * (y + 1))
-          ;----------
-          get 1
-          get 1
-          push.f 1
-          add.f
-          mul.f
-          set 1
-        jump begin_loop_1
-      jump endif_2
-      .ifnot_2
-        jump end_loop_1
-      .endif_2
-    .end_loop_1
+;----------
+; var a = 1
+;----------
+push.f 0
+push.f 1
+set 0
+;----------
+; var b = 2
+;----------
+push.f 0
+push.f 2
+set 1
+;----------
+; var c = 3
+;----------
+push.f 0
+push.f 3
+set 2
+;----------
+; var d = 4
+;----------
+push.f 0
+push.f 4
+set 3
+;----------
+; var e = 5
+;----------
+push.f 0
+push.f 5
+set 2
 halt

@@ -5,5 +5,7 @@ namespace Lahda.Parser.Impl
         public AbstractExpressionNode(NodeType type) : base(type)
         {
         }
+
+        public virtual AbstractExpressionNode Optimize() => this;
     }
 }

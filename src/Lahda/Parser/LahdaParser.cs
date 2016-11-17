@@ -226,19 +226,14 @@ namespace Lahda.Parser
                 throw new InvalidOperationException($"declaration identifier {ident.Type}");
 
             // consume the operator
-            var op = (ValueToken<string>)NextToken();
-            if (op.Type != TokenType.Operator)
-                throw new InvalidOperationException($"declaration operator {op.Type}");
+            if (!IsValue(TokenType.Operator, Operators.ASSIGN))
+                throw new InvalidOperationException($"declaration operator missing");
+            NextToken();
 
             var expression = ArithmeticExpression();
 
-            var symbol = Symbols.Search(ident.Value);
-            if (!symbol.IsUnknow)
-            {
-                throw new InvalidOperationException($"symbol already defined {ident.Value}");
-            }
-
-            Symbols.DefineSymbol(symbol = new Symbol(ident.Value));
+            var symbol = new Symbol(SymbolType.Floating, ident.Value);
+            Symbols.DefineSymbol(symbol);
 
             return new DeclarationNode(new IdentifierNode(symbol), expression);
         }
@@ -249,16 +244,13 @@ namespace Lahda.Parser
             if (ident.Type != TokenType.Identifier)
                 throw new InvalidOperationException($"assignation identifier {ident.Type}");
 
-            // consume the operator
-            var op = (ValueToken<string>)NextToken();
-            if (op.Type != TokenType.Operator)
-                throw new InvalidOperationException($"assignation operator {op.Type}");
+            if (!IsValue(TokenType.Operator, Operators.ASSIGN))
+                throw new InvalidOperationException($"assignation operator missing");
+            NextToken();
 
             var symbol = Symbols.Search(ident.Value);
             if (symbol.IsUnknow)
-            {
                 throw new InvalidOperationException($"unknow symbol {ident.Value}");
-            }
 
             var expression = ArithmeticExpression();
 
@@ -384,6 +376,7 @@ namespace Lahda.Parser
         }
 
         private bool IsType(TokenType type) => PeekToken().Type == type;
+
         private bool IsKeyword(string op) => IsValue<string>(TokenType.Keyword, op);
 
         private bool IsOperator(string op) => IsValue<string>(TokenType.Operator, op);

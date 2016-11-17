@@ -1,115 +1,112 @@
 using Lahda.Parser;
-using Lahda.Common;
 using Lahda.Lexer;
 using Lahda.Parser.Impl;
 using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Lahda.Codegen
 {
     public sealed class CodeGenerator
     {
-        private sealed class GenerationState
+        private enum ScopeType
         {
-            public AbstractNode ParentNode { get; set; }
-            public AbstractNode Node { get; set; }
-            public StringBuilder Output { get; set; }
-            public int IndentationLevel { get; set; }
-
-            public GenerationState Copy(AbstractNode nextNode)
-            {
-                return Copy(nextNode, IndentationLevel);
-            }
-
-            public GenerationState Copy(AbstractNode nextNode, int indentLevel)
-            {
-                return new GenerationState()
-                {
-                    ParentNode = Node,
-                    Node = nextNode,
-                    IndentationLevel = indentLevel,
-                    Output = Output
-                };
-            }
+            Loop,
+            Conditional
         }
 
         public AbstractNode RootNode { get; }
 
-        public ulong VarId { get; private set; }
-        public uint LabelId { get; private set; }
+        private Dictionary<ScopeType, Stack<int>> ScopeLabel { get; set; }
+
+        private string CurrentLabel(ScopeType type) => string.Join("_", ScopeLabel[type]);
 
         public CodeGenerator(AbstractNode rootNode)
         {
             RootNode = rootNode;
+            ScopeLabel = new Dictionary<ScopeType, Stack<int>>()
+            {
+                { ScopeType.Loop, new Stack<int>(new []{ 0 }) },
+                { ScopeType.Conditional, new Stack<int>(new []{ 0 }) },
+            };
         }
 
         public string Build()
         {
-            VarId = 0;
-            LabelId = 0;
+            Optimize();
             var sb = new StringBuilder();
             sb.AppendLine(".start");
-            Generate(new GenerationState()
-            {
-                Node = RootNode,
-                Output = sb,
-                IndentationLevel = 1,
-            });
+            foreach (var line in Generate(RootNode))
+                sb.AppendLine(line);
             sb.AppendLine("halt");
             return sb.ToString();
         }
 
-        private void Generate(GenerationState state)
+        private void Optimize()
         {
-            switch (state.Node.Type)
+            RootNode.OptimizeChilds();
+        }
+
+        private void PushScopeLabel(ScopeType type) => ScopeLabel[type].Push(0);
+        private void IncrementScopeLabel(ScopeType type) => ScopeLabel[type].Push(ScopeLabel[type].Pop() + 1);
+        private void PopScopeLabel(ScopeType type) => ScopeLabel[type].Pop();
+
+        private IEnumerable<string> Generate(AbstractNode node)
+        {
+            switch (node.Type)
             {
                 case NodeType.Block:
-                    foreach (var statement in ((BlockNode)state.Node).Statements)
-                        Generate(state.Copy(statement, state.IndentationLevel + 1));
+                    foreach (var statement in ((BlockNode)node).Statements)
+                        foreach (var line in Generate(statement))
+                            yield return line;
                     break;
 
                 case NodeType.Operation:
-                    var operation = (OperationNode)state.Node;
-                    Generate(state.Copy(operation.Left));
-                    Generate(state.Copy(operation.Right));
+                    var operation = (OperationNode)node;
+                    foreach (var line in Generate(operation.Left))
+                        yield return line;
+                    foreach (var line in Generate(operation.Right))
+                        yield return line;
+                    Generate(operation.Right);
                     switch (operation.Operator)
                     {
                         case Operators.ADD:
-                            Append(state, "add.f");
+                            yield return "add.f";
                             break;
                         case Operators.SUB:
-                            Append(state, "subb.f");
+                            yield return "subb.f";
                             break;
                         case Operators.MUL:
-                            Append(state, "mul.f");
+                            yield return "mul.f";
                             break;
                         case Operators.DIV:
-                            Append(state, "div.f");
+                            yield return "div.f";
                             break;
                         case Operators.AND:
                         case Operators.ANDALSO:
-                            Append(state, "and");
+                            yield return "and";
                             break;
                         case Operators.OR:
                         case Operators.ORELSE:
-                            Append(state, "or");
+                            yield return "or";
                             break;
                         case Operators.EQUALS:
-                            Append(state, "cmpeq.f");
+                            yield return "cmpeq.f";
                             break;
                         case Operators.NOT_EQUALS:
-                            Append(state, "cmpne.f");
+                            yield return "cmpne.f";
                             break;
                         case Operators.NOT_GREATER:
-                            Append(state, "cmple.f");
+                            yield return "cmple.f";
                             break;
                         case Operators.LESS:
-                            Append(state, "cmplt.f");
+                            yield return "cmplt.f";
                             break;
                         case Operators.NOT_LESS:
-                            Append(state, "cmpge.f");
+                            yield return "cmpge.f";
                             break;
                         case Operators.GREATER:
-                            Append(state, "cmpgt.f");
+                            yield return "cmpgt.f";
                             break;
                         case Operators.MOD:
 
@@ -118,103 +115,87 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Declaration:
-                    var decl = (DeclarationNode)state.Node;
-                    decl.Identifier.Symbol.Pointer = VarId++;
-                    Append(state, ";----------");
-                    Append(state, $"; var {decl.Identifier.Symbol.Name} = {decl.Expression}");
-                    Append(state, ";----------");
-                    Append(state, "push.f 0");
-                    Generate(state.Copy(decl.Expression));
-                    Append(state, $"set {decl.Identifier.Symbol.Pointer}");
+                    var decl = (DeclarationNode)node;
+                    yield return ";----------";
+                    yield return $"; var {decl.Identifier.Symbol.Name} = {decl.Expression}";
+                    yield return ";----------";
+                    yield return "push.f 0";
+                    foreach (var line in Generate(decl.Expression))
+                        yield return line;
+                    yield return $"set {decl.Identifier.Symbol.Pointer}";
                     break;
 
                 case NodeType.Assignation:
-                    var assign = (AssignationNode)state.Node;
-                    Append(state, ";----------");
-                    Append(state, $"; {assign.Identifier.Symbol.Name} = {assign.Expression}");
-                    Append(state, ";----------");
-                    Generate(state.Copy(assign.Expression));
-                    Append(state, $"set {assign.Identifier.Symbol.Pointer}");
+                    var assign = (AssignationNode)node;
+                    yield return ";----------";
+                    yield return $"; {assign.Identifier.Symbol.Name} = {assign.Expression}";
+                    yield return ";----------";
+                    foreach (var line in Generate(assign.Expression))
+                        yield return line;
+                    yield return $"set {assign.Identifier.Symbol.Pointer}";
                     break;
 
                 case NodeType.Literal:
-                    var lit = (LiteralNode)state.Node;
-                    Append(state, $"push.f {lit.Value}");
+                    var lit = (LiteralNode)node;
+                    yield return $"push.f {lit.Value}";
                     break;
 
                 case NodeType.Identifier:
-                    var ident = (IdentifierNode)state.Node;
-                    Append(state, $"get {ident.Symbol.Pointer}");
+                    var ident = (IdentifierNode)node;
+                    yield return $"get {ident.Symbol.Pointer}";
                     break;
 
                 case NodeType.Loop:
-                    var loop = (LoopNode)state.Node;
-                    loop.Id = LabelId++;
-                    Append(state, ";----------");
-                    Append(state, $"; loop_{loop.Id}");
-                    Append(state, ";----------");
-                    BeginLoop(state, loop.Id);
-                    Generate(state.Copy(loop.StmtsBlock, state.IndentationLevel + 1));
-                    EndLoop(state, loop.Id);
+                    var loop = (LoopNode)node;
+                    yield return ";--------";
+                    yield return $"; loop";
+                    yield return ";--------";
+                    IncrementScopeLabel(ScopeType.Loop);
+                    var loopId = CurrentLabel(ScopeType.Loop);
+                    PushScopeLabel(ScopeType.Loop);
+                    yield return DeclareLabel(BeginLoop(loopId));
+                    foreach (var line in Generate(loop.Cond))
+                        yield return line;
+                    yield return DeclareLabel(EndLoop(loopId));
+                    PopScopeLabel(ScopeType.Loop);
                     break;
 
                 case NodeType.Break:
-                    BreakLoop(state, state.Node.Id);
-                    break;
-
-                case NodeType.Continue:
-                    ContinueLoop(state, state.Node.Id);
+                    BreakLoop(CurrentLabel(ScopeType.Loop));
                     break;
 
                 case NodeType.Conditional:
-                    var cond = (ConditionalNode)state.Node;
-                    cond.Id = LabelId++;
-                    Append(state, ";----------");
-                    Append(state, $"; if {cond.Expression}");
-                    Append(state, ";----------");
-                    Generate(state.Copy(cond.Expression));
-                    Append(state, $"jumpf ifnot_{cond.Id}");
-
-                    Append(state, ";------");
-                    Append(state, $"; then");
-                    Append(state, ";------");
-                    Generate(state.Copy(cond.TrueStatements));
-                    Append(state, $"jump endif_{cond.Id}");
-                    Append(state, $".ifnot_{cond.Id}");
-                    Append(state, ";------");
-                    Append(state, $"; else");
-                    Append(state, ";------");
-                    Generate(state.Copy(cond.FalseStatements));
-                    Append(state, $".endif_{cond.Id}");
+                    var cond = (ConditionalNode)node;
+                    yield return ";----------";
+                    yield return $"; if {cond.Expression}";
+                    yield return ";----------";
+                    IncrementScopeLabel(ScopeType.Conditional);
+                    var condId = CurrentLabel(ScopeType.Conditional);
+                    PushScopeLabel(ScopeType.Conditional);
+                    foreach (var line in Generate(cond.Expression))
+                        yield return line;
+                    yield return JumpFalse(IfNot(condId));
+                    foreach (var line in Generate(cond.TrueStatements))
+                        yield return line;
+                    yield return Jump(BeginLoop(condId));
+                    yield return DeclareLabel(IfNot(condId));
+                    foreach (var line in Generate(cond.FalseStatements))
+                        yield return line;
+                    yield return DeclareLabel(EndIf(condId));
+                    PopScopeLabel(ScopeType.Conditional);
                     break;
             }
         }
 
-        private void BreakLoop(GenerationState state, uint level)
-        {
-            Append(state, $"jump end_loop_{level}");
-        }
 
-        private void ContinueLoop(GenerationState state, uint level)
-        {
-            Append(state, $"jump begin_loop_{level}");
-        }
-
-        private void BeginLoop(GenerationState state, uint level)
-        {
-            Append(state, $".begin_loop_{level}");
-        }
-
-        private void EndLoop(GenerationState state, uint level)
-        {
-            Append(state, $".end_loop_{level}");
-        }
-
-        private void Append(GenerationState state, string v)
-        {
-            for (int i = 0; i < state.IndentationLevel; i++)
-                state.Output.Append("  ");
-            state.Output.AppendLine(v);
-        }
+        private string JumpSpec(char type, string label) => $"jump{type} {label}";
+        private string JumpFalse(string label) => JumpSpec('f', label);
+        private string Jump(string label) => $"jump {label}";
+        private string IfNot(string id) => $"ifnot_{id}";
+        private string EndIf(string id) => $"endif_{id}";
+        private string BeginLoop(string id) => $"begin_loop_{id}";
+        private string EndLoop(string id) => $"end_loop_{id}";
+        private string BreakLoop(string id) => Jump(EndLoop(id));
+        private string DeclareLabel(string label) => $".{label}";
     }
 }

@@ -12,7 +12,7 @@ namespace Lahda.Tests
         public void SymbolTable_should_find_defined_symbol(string ident)
         {
             var table = new SymbolTable();
-            table.DefineSymbol(new Symbol(ident));
+            table.DefineSymbol(new Symbol(SymbolType.Floating, ident));
             var symbol = table.Search(ident);
             Assert.False(symbol.IsUnknow);
             Assert.Equal(symbol.Name, ident);

@@ -1,20 +1,18 @@
 using System.Text;
+using Lahda.Lexer;
+using System.Collections.Generic;
 
 namespace Lahda.Parser.Impl
 {
     public sealed class LoopNode : AbstractLoopNode
     {
-        public uint Id { get; set; }
-
-        public AbstractStatementNode StmtsBlock { get; }
+        public ConditionalNode Cond { get; private set; }
 
         public LoopNode(AbstractExpressionNode condition, BlockNode code, bool reverse = false)
         {
-            var brk = new BlockNode(new BreakNode(this));
-            var cont = new BlockNode(code, new ContinueNode(this));
-            var trueStmts = reverse ? brk : cont;
-            var falseStmts = reverse ? cont : brk;
-            StmtsBlock = new ConditionalNode(condition, trueStmts, falseStmts);
+            if (reverse)
+                condition = new OperationNode(Operators.EQUALS, condition, new LiteralNode(0));
+            Cond = new ConditionalNode(condition, code, new BlockNode(new BreakNode()));
         }
 
         public override string ToString(int indent)
@@ -23,9 +21,15 @@ namespace Lahda.Parser.Impl
             for (var i = 0; i < indent; i++)
                 sb.Append("\t");
             sb.AppendLine("WHILE");
-            sb.AppendLine(StmtsBlock.ToString(indent + 1));
+            sb.AppendLine(Cond.ToString(indent + 1));
             return sb.ToString();
         }
+
         public override string ToString() => ToString(0);
+
+        public override void OptimizeChilds()
+        {
+            Cond.OptimizeChilds();
+        }
     }
 }

@@ -14,19 +14,22 @@ namespace Lahda.Common
             PushScope(); // rootScope
         }
 
+        public int NextPointer => m_scopes.Sum(scope => scope.VarNumber);
+
         public void PushScope() => m_scopes.Push(new SymbolScope());
 
         public SymbolScope PopScope() => m_scopes.Pop();
 
-        public SymbolScope CurrentScope() => m_scopes.Peek();
+        public SymbolScope CurrentScope => m_scopes.Peek();
 
         public SymbolScope GetScope(int index) => m_scopes.ElementAt(index);
 
         public void DefineSymbol(Symbol symbol)
         {
-            if (CurrentScope().ContainsKey(symbol.Name))
+            if (CurrentScope.ContainsKey(symbol.Name))
                 throw new InvalidOperationException($"identifier already defined for {symbol.Name}");
-            CurrentScope().Add(symbol.Name, symbol);
+            symbol.Pointer = NextPointer;
+            CurrentScope.Add(symbol.Name, symbol);
         }
 
         public Symbol Search(string identifier)

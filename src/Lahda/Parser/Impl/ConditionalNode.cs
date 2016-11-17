@@ -1,12 +1,13 @@
 using System.Text;
+using System.Collections.Generic;
 
 namespace Lahda.Parser.Impl
 {
     public sealed class ConditionalNode : AbstractStatementNode
     {
-        public AbstractExpressionNode Expression { get; }
-        public BlockNode TrueStatements { get; }
-        public BlockNode FalseStatements { get; }
+        public AbstractExpressionNode Expression { get; private set; }
+        public BlockNode TrueStatements { get; private set; }
+        public BlockNode FalseStatements { get; private set; }
 
         public ConditionalNode(AbstractExpressionNode expression, BlockNode trueStatements, BlockNode falseStatements) : base(NodeType.Conditional)
         {
@@ -30,5 +31,12 @@ namespace Lahda.Parser.Impl
         }
 
         public override string ToString() => ToString(0);
+
+        public override void OptimizeChilds()
+        {
+            Expression = Expression.Optimize();
+            TrueStatements.OptimizeChilds();
+            FalseStatements.OptimizeChilds();
+        }
     }
 }

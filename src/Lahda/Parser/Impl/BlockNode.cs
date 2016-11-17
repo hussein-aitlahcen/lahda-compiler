@@ -30,5 +30,7 @@ namespace Lahda.Parser.Impl
         }
 
         public override string ToString() => ToString(0);
+
+        public override void OptimizeChilds() => Statements.ForEach(s => s.OptimizeChilds());
     }
 }

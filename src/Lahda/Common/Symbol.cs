@@ -2,13 +2,15 @@ namespace Lahda.Common
 {
     public sealed class Symbol
     {
-        public static Symbol Unknow = new Symbol("0000");
+        public static Symbol Unknow = new Symbol(SymbolType.Floating, "0000");
 
+        public SymbolType Type { get; }
         public string Name { get; }
-        public ulong Pointer { get; set; }
+        public int Pointer { get; set; }
 
-        public Symbol(string name)
+        public Symbol(SymbolType type, string name)
         {
+            Type = type;
             Name = name;
         }
 

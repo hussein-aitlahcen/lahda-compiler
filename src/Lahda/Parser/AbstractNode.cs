@@ -1,12 +1,11 @@
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
-using Lahda.Lexer;
 
 namespace Lahda.Parser
 {
     public abstract class AbstractNode
     {
-        public virtual uint Id { get; set; }
         public NodeType Type { get; }
 
         public AbstractNode(NodeType type)
@@ -22,5 +21,7 @@ namespace Lahda.Parser
             sb.Append(ToString());
             return sb.ToString();
         }
+
+        public virtual void OptimizeChilds() { }
     }
 }
