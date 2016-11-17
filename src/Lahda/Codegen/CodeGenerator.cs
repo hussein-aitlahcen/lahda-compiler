@@ -145,6 +145,16 @@ namespace Lahda.Codegen
                     yield return $"get {ident.Symbol.Pointer}";
                     break;
 
+                case NodeType.Print:
+                    var print = (PrintNode)node;
+                    yield return ";--------";
+                    yield return $"; print({print.Expression})";
+                    yield return ";--------";
+                    foreach (var line in Generate(print.Expression))
+                        yield return line;
+                    yield return "out.f";
+                    break;
+
                 case NodeType.Loop:
                     var loop = (LoopNode)node;
                     yield return ";--------";

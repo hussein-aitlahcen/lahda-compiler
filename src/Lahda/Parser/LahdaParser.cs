@@ -57,6 +57,9 @@ namespace Lahda.Parser
                 case Keywords.VAR:
                     return Statement(DeclarationExpression);
 
+                case Keywords.PRINT:
+                    return Statement(PrintExpression);
+
                 case Keywords.WHILE:
                 case Keywords.FOR:
                 case Keywords.DO:
@@ -215,6 +218,12 @@ namespace Lahda.Parser
             T expression = fun();
             EnsureEndOfStatement();
             return expression;
+        }
+
+        public PrintNode PrintExpression()
+        {
+            NextToken();
+            return new PrintNode(ArithmeticExpression());
         }
 
         public DeclarationNode DeclarationExpression()

@@ -16,6 +16,7 @@ namespace Lahda.Lexer
         public const string RESET = "reset";
         public const string WHILE = "while";
         public const string VAR = "var";
+        public const string PRINT = "print";
         public const string INT = "int";
         public const string FLOAT = "float";
         public const string STRING = "string";
