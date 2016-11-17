@@ -1,6 +1,5 @@
 using System.Text;
 using Lahda.Lexer;
-using System.Collections.Generic;
 
 namespace Lahda.Parser.Impl
 {

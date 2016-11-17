@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Lahda.Parser.Impl
 {
     public sealed class AssignationNode : AbstractStatementNode

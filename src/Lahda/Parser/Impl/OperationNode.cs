@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Lahda.Lexer;
 
 namespace Lahda.Parser.Impl
