@@ -14,7 +14,7 @@ namespace Lahda.Tests
         {
             var codeSource = CodeSource.FromMemory(content);
             var parser = new LahdaParser(new LahdaLexer(codeSource));
-            var codeGen = new CodeGenerator(parser.NextExpression());
+            var codeGen = new CodeGenerator(parser.NextStatement());
             var built = codeGen.Build();
             Console.WriteLine(built);
         }

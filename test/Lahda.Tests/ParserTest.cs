@@ -57,7 +57,7 @@ namespace Lahda.Tests
         public void Parser_should_parse_assignations(string content)
         {
             var parser = GetParser(content);
-            var node = parser.NextExpression();
+            var node = parser.NextStatement();
         }
 
         [Theory]
@@ -67,7 +67,7 @@ namespace Lahda.Tests
         public void Parser_should_parse_declarations(string content)
         {
             var parser = GetParser(content);
-            var node = parser.NextExpression();
+            var node = parser.NextStatement();
         }
 
         [Theory]
@@ -83,7 +83,7 @@ namespace Lahda.Tests
         public void Parser_should_parse_conditional(string content)
         {
             var parser = GetParser(content);
-            var node = parser.NextExpression();
+            var node = parser.NextStatement();
         }
 
         [Theory]
@@ -95,7 +95,7 @@ namespace Lahda.Tests
         public void Parser_should_parse_loops(string content)
         {
             var parser = GetParser(content);
-            var node = parser.NextExpression();
+            var node = parser.NextStatement();
         }
 
         [Theory]
