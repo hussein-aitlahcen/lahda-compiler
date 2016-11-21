@@ -1,206 +1,193 @@
 using Lahda.Parser;
 using Lahda.Lexer;
 using Lahda.Parser.Impl;
-using System.Text;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Lahda.Codegen
 {
     public sealed class CodeGenerator
     {
-        private enum ScopeType
-        {
-            Loop,
-            Conditional
-        }
-
         public AbstractNode RootNode { get; }
 
-        private Dictionary<ScopeType, Stack<int>> ScopeLabel { get; set; }
+        public ICodeOutput Output { get; }
 
-        private string CurrentLabel(ScopeType type) => string.Join("_", ScopeLabel[type]);
+        private ScopeLabels Labels { get; set; }
 
-        public CodeGenerator(AbstractNode rootNode)
+        private string CurrentLabel(ScopeType type) => Labels[type].CurrentLabel;
+
+        public CodeGenerator(ICodeOutput output, AbstractNode rootNode)
         {
+            Output = output;
             RootNode = rootNode;
-            ScopeLabel = new Dictionary<ScopeType, Stack<int>>()
-            {
-                { ScopeType.Loop, new Stack<int>(new []{ 0 }) },
-                { ScopeType.Conditional, new Stack<int>(new []{ 0 }) },
-            };
-        }
-
-        public string Build()
-        {
+            Labels = new ScopeLabels();
             Optimize();
-            var sb = new StringBuilder();
-            sb.AppendLine(".start");
-            foreach (var line in Generate(RootNode))
-                sb.AppendLine(line);
-            sb.AppendLine("halt");
-            return sb.ToString();
         }
 
-        private void Optimize()
-        {
-            RootNode.OptimizeChilds();
-        }
+        public void Build() => Generate(RootNode);
 
-        private void PushScopeLabel(ScopeType type) => ScopeLabel[type].Push(0);
-        private void IncrementScopeLabel(ScopeType type) => ScopeLabel[type].Push(PopScopeLabel(type) + 1);
-        private int PopScopeLabel(ScopeType type) => ScopeLabel[type].Pop();
+        public void Write(string line) => Output.Write(line);
 
-        private IEnumerable<string> Generate(AbstractNode node)
+        private void Optimize() => RootNode.OptimizeChilds();
+
+        private void PushLabel(ScopeType type) => Labels[type].Push(0);
+        private void IncrementLabel(ScopeType type) => Labels[type].Increment();
+        private int PopLabel(ScopeType type) => Labels[type].Pop();
+
+        private void Generate(AbstractNode node)
         {
             switch (node.Type)
             {
                 case NodeType.Block:
-                    foreach (var statement in ((BlockNode)node).Statements)
-                        foreach (var line in Generate(statement))
-                            yield return line;
+                    ((BlockNode)node).Statements.ForEach(Generate);
                     break;
 
                 case NodeType.Operation:
                     var operation = (OperationNode)node;
-                    var requireInteger = operation.Operator == Operators.AND || operation.Operator == Operators.ANDALSO
-                     || operation.Operator == Operators.OR || operation.Operator == Operators.ORELSE;
-                    foreach (var line in Generate(operation.Left))
-                        yield return line;
+
+                    // Operations that require two integer as input
+                    var integerOperations = new[]
+                    {
+                        Operators.AND,
+                        Operators.ANDALSO,
+                        Operators.OR,
+                        Operators.ORELSE
+                    };
+
+                    /*
+                        We accept floating only, sometimes we need integer (logical and/or)
+                        In this case, we cast the floating into an integer and cast back the result into a floating one.
+                    */
+                    var requireInteger = integerOperations.Contains(operation.Operator);
+
+                    Generate(operation.Left);
                     if (requireInteger)
-                        yield return "ftoi";
-                    foreach (var line in Generate(operation.Right))
-                        yield return line;
+                        Write("ftoi");
+
+                    Generate(operation.Right);
                     if (requireInteger)
-                        yield return "ftoi";
+                        Write("ftoi");
+
                     switch (operation.Operator)
                     {
                         case Operators.ADD:
-                            yield return "add.f";
+                            Write("add.f");
                             break;
                         case Operators.SUB:
-                            yield return "sub.f";
+                            Write("sub.f");
                             break;
                         case Operators.MUL:
-                            yield return "mul.f";
+                            Write("mul.f");
                             break;
                         case Operators.DIV:
-                            yield return "div.f";
+                            Write("div.f");
                             break;
                         case Operators.AND:
                         case Operators.ANDALSO:
-                            yield return "and";
+                            Write("and");
                             break;
                         case Operators.OR:
                         case Operators.ORELSE:
-                            yield return "or";
+                            Write("or");
                             break;
                         case Operators.EQUALS:
-                            yield return "cmpeq.f";
+                            Write("cmpeq.f");
                             break;
                         case Operators.NOT_EQUALS:
-                            yield return "cmpne.f";
+                            Write("cmpne.f");
                             break;
                         case Operators.NOT_GREATER:
-                            yield return "cmple.f";
+                            Write("cmple.f");
                             break;
                         case Operators.LESS:
-                            yield return "cmplt.f";
+                            Write("cmplt.f");
                             break;
                         case Operators.NOT_LESS:
-                            yield return "cmpge.f";
+                            Write("cmpge.f");
                             break;
                         case Operators.GREATER:
-                            yield return "cmpgt.f";
+                            Write("cmpgt.f");
                             break;
                         case Operators.MOD:
 
                             break;
                     }
                     if (requireInteger)
-                        yield return "itof";
+                        Write("itof");
                     break;
 
                 case NodeType.Declaration:
                     var decl = (DeclarationNode)node;
-                    yield return ";----------";
-                    yield return $"; var {decl.Identifier.Symbol.Name} = {decl.Expression}";
-                    yield return ";----------";
-                    yield return "push.f 0";
-                    foreach (var line in Generate(decl.Expression))
-                        yield return line;
-                    yield return $"set {decl.Identifier.Symbol.Pointer}";
+                    Write("----------");
+                    Write($" var {decl.Identifier.Symbol.Name} = {decl.Expression}");
+                    Write("----------");
+                    Write("push.f 0");
+                    Generate(decl.Expression);
+                    Write($"set {decl.Identifier.Symbol.Pointer}");
                     break;
 
                 case NodeType.Assignation:
                     var assign = (AssignationNode)node;
-                    yield return ";----------";
-                    yield return $"; {assign.Identifier.Symbol.Name} = {assign.Expression}";
-                    yield return ";----------";
-                    foreach (var line in Generate(assign.Expression))
-                        yield return line;
-                    yield return $"set {assign.Identifier.Symbol.Pointer}";
+                    Write("----------");
+                    Write($" {assign.Identifier.Symbol.Name} = {assign.Expression}");
+                    Write("----------");
+                    Generate(assign.Expression);
+                    Write($"set {assign.Identifier.Symbol.Pointer}");
                     break;
 
                 case NodeType.Literal:
                     var lit = (LiteralNode)node;
-                    yield return $"push.f {lit.Value}";
+                    Write($"push.f {lit.Value}");
                     break;
 
                 case NodeType.Identifier:
                     var ident = (IdentifierNode)node;
-                    yield return $"get {ident.Symbol.Pointer}";
+                    Write($"get {ident.Symbol.Pointer}");
                     break;
 
                 case NodeType.Print:
                     var print = (PrintNode)node;
-                    yield return ";--------";
-                    yield return $"; print({print.Expression})";
-                    yield return ";--------";
-                    foreach (var line in Generate(print.Expression))
-                        yield return line;
-                    yield return "out.f";
+                    Write("--------");
+                    Write($" print({print.Expression})");
+                    Write("--------");
+                    Generate(print.Expression);
+                    Write("out.f");
                     break;
 
                 case NodeType.Loop:
                     var loop = (LoopNode)node;
-                    yield return ";--------";
-                    yield return $"; loop";
-                    yield return ";--------";
-                    IncrementScopeLabel(ScopeType.Loop);
-                    PushScopeLabel(ScopeType.Loop);
+                    Write("--------");
+                    Write(" loop");
+                    Write("--------");
+                    IncrementLabel(ScopeType.Loop);
+                    PushLabel(ScopeType.Loop);
                     var loopId = CurrentLabel(ScopeType.Loop);
-                    yield return DeclareLabel(BeginLoop(loopId));
-                    foreach (var line in Generate(loop.Cond))
-                        yield return line;
-                    yield return Jump(BeginLoop(loopId));
-                    yield return DeclareLabel(EndLoop(loopId));
-                    PopScopeLabel(ScopeType.Loop);
+                    Write(DeclareLabel(BeginLoop(loopId)));
+                    Generate(loop.Cond);
+                    Write(Jump(BeginLoop(loopId)));
+                    Write(DeclareLabel(EndLoop(loopId)));
+                    PopLabel(ScopeType.Loop);
                     break;
 
                 case NodeType.Break:
-                    yield return BreakLoop(CurrentLabel(ScopeType.Loop));
+                    Write(Jump(EndLoop(CurrentLabel(ScopeType.Loop))));
                     break;
 
                 case NodeType.Conditional:
                     var cond = (ConditionalNode)node;
-                    yield return ";----------";
-                    yield return $"; if {cond.Expression}";
-                    yield return ";----------";
-                    IncrementScopeLabel(ScopeType.Conditional);
-                    PushScopeLabel(ScopeType.Conditional);
+                    Write("----------");
+                    Write($" if {cond.Expression}");
+                    Write("----------");
+                    IncrementLabel(ScopeType.Conditional);
+                    PushLabel(ScopeType.Conditional);
                     var condId = CurrentLabel(ScopeType.Conditional);
-                    foreach (var line in Generate(cond.Expression))
-                        yield return line;
-                    yield return JumpFalse(IfNot(condId));
-                    foreach (var line in Generate(cond.TrueStatements))
-                        yield return line;
-                    yield return Jump(EndIf(condId));
-                    yield return DeclareLabel(IfNot(condId));
-                    foreach (var line in Generate(cond.FalseStatements))
-                        yield return line;
-                    yield return DeclareLabel(EndIf(condId));
-                    PopScopeLabel(ScopeType.Conditional);
+                    Generate(cond.Expression);
+                    Write(JumpFalse(Else(condId)));
+                    Generate(cond.TrueStatements);
+                    Write(Jump(EndIf(condId)));
+                    Write(DeclareLabel(Else(condId)));
+                    Generate(cond.FalseStatements);
+                    Write(DeclareLabel(EndIf(condId)));
+                    PopLabel(ScopeType.Conditional);
                     break;
             }
         }
@@ -209,11 +196,10 @@ namespace Lahda.Codegen
         private string JumpSpec(char type, string label) => $"jump{type} {label}";
         private string JumpFalse(string label) => JumpSpec('f', label);
         private string Jump(string label) => $"jump {label}";
-        private string IfNot(string id) => $"ifnot_{id}";
+        private string Else(string id) => $"else_{id}";
         private string EndIf(string id) => $"endif_{id}";
-        private string BeginLoop(string id) => $"begin_loop_{id}";
-        private string EndLoop(string id) => $"end_loop_{id}";
-        private string BreakLoop(string id) => Jump(EndLoop(id));
+        private string BeginLoop(string id) => $"beginloop_{id}";
+        private string EndLoop(string id) => $"endloop_{id}";
         private string DeclareLabel(string label) => $".{label}";
     }
 }
