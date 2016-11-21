@@ -8,69 +8,69 @@ Its syntax looks like the JavaScript, but it is statically typed.
 
 No optimizations are yet used.
 
-## Example
+## Example factorial(5)
 ```javascript
-var x = 50;
-var y = 0; 
-if(y <= 0) { 
-    y = 1; 
+var x = 1; 
+var s = 1; 
+while(s < 5) 
+{ 
+    s = s + 1; 
+    x = x * s; 
 } 
-while(y < x) {
-    y = y * (y + 1); 
-} 
+print x;
 ```
 
 Will be compiled into
 
 ```assembly
-.start
-    ;----------
-    ; var x = 50
-    ;----------
-    push.f 0
-    push.f 50
-    set 0
-    ;----------
-    ; var y = 0
-    ;----------
-    push.f 0
-    push.f 0
-    set 1
-    get 1
-    push.f 0
-    cmple.f
-    jumpf ifnot_0
-      ;----------
-      ; y = 1
-      ;----------
-      push.f 1
-      set 1
-    jump endif_0
-    .ifnot_0
-    .endif_0
-    ;----------
-    ; loop_1
-    ;----------
-    .begin_loop_1
-      get 1
-      get 0
-      cmplt.f
-      jumpf ifnot_2
-          ;----------
-          ; y = (y * (y + 1))
-          ;----------
-          get 1
-          get 1
-          push.f 1
-          add.f
-          mul.f
-          set 1
-        jump begin_loop_1
-      jump endif_2
-      .ifnot_2
-        jump end_loop_1
-      .endif_2
-    .end_loop_1
+----------
+ var x = 1
+----------
+push.f 0
+push.f 1
+set 0
+----------
+ var s = 1
+----------
+push.f 0
+push.f 1
+set 1
+--------
+ loop
+--------
+.beginloop_0_1
+----------
+ if (s < 5)
+----------
+get 1
+push.f 5
+cmplt.f
+jumpf else_0_1
+----------
+ s = (s + 1)
+----------
+get 1
+push.f 1
+add.f
+set 1
+----------
+ x = (x * s)
+----------
+get 0
+get 1
+mul.f
+set 0
+jump endif_0_1
+.else_0_1
+jump endloop_0_1
+.endif_0_1
+jump beginloop_0_1
+.endloop_0_1
+--------
+ print(x)
+--------
+get 0
+out.f
 halt
 ```
 

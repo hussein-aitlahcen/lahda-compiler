@@ -23,7 +23,12 @@ namespace Lahda.Codegen
             Optimize();
         }
 
-        public void Build() => Generate(RootNode);
+        public void Build()
+        {
+            Write(".start");
+            Generate(RootNode);
+            Write("halt");
+        }
 
         public void Write(string line) => Output.Write(line);
 
