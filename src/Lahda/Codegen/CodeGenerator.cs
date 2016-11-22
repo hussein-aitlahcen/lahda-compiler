@@ -31,9 +31,7 @@ namespace Lahda.Codegen
         }
 
         public void Write(string line) => Output.Write(line);
-
         private void Optimize() => RootNode.OptimizeChilds();
-
         private void PushLabel(ScopeType type) => Labels[type].Push(0);
         private void IncrementLabel(ScopeType type) => Labels[type].Increment();
         private int PopLabel(ScopeType type) => Labels[type].Pop();
@@ -175,6 +173,10 @@ namespace Lahda.Codegen
 
                 case NodeType.Break:
                     Write(Jump(EndLoop(CurrentLabel(ScopeType.Loop))));
+                    break;
+
+                case NodeType.Continue:
+                    Write(Jump(BeginLoop(CurrentLabel(ScopeType.Loop))));
                     break;
 
                 case NodeType.Conditional:

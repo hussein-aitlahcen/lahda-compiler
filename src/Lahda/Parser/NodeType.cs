@@ -11,6 +11,7 @@ namespace Lahda.Parser
         Conditional,
         Loop,
         Break,
+        Continue,
         Print,
         Function,
     }
