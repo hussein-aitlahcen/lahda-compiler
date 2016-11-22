@@ -42,6 +42,7 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 * **Assignation** = Identifier *`=`* Expression
 * **Declaration** = *`var`* Assignation
 * **Block** = *`{`* Statement\* *`}`*
+* **Conditional** *`if`* *`(`* Expression *`)`* Statement (*`else`* Statement)?
 * **Loop** =
   * *`while`* *`(`* Expression *`)`* Statement |
   * *`for`* *`(`* Declaration ; Expression ; Assignation *`)`* Block |

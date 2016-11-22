@@ -189,11 +189,11 @@ namespace Lahda.Parser
         {
             NextToken();
             var condition = ParentheseEnclosed(ArithmeticExpression);
-            var trueStmts = StatementsBlock();
-            var falseStmts = new BlockNode();
+            var trueStmts = NextStatement();
+            AbstractStatementNode falseStmts = new BlockNode();
             if (IsKeyword(Keywords.ELSE))
             {
-                falseStmts = StatementsBlock();
+                falseStmts = NextStatement();
             }
             return new ConditionalNode(condition, trueStmts, falseStmts);
         }

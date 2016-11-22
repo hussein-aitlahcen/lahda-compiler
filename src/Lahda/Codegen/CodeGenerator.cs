@@ -189,10 +189,10 @@ namespace Lahda.Codegen
                     var condId = CurrentLabel(ScopeType.Conditional);
                     Generate(cond.Expression);
                     Write(JumpFalse(Else(condId)));
-                    Generate(cond.TrueStatements);
+                    Generate(cond.TrueStatement);
                     Write(Jump(EndIf(condId)));
                     Write(DeclareLabel(Else(condId)));
-                    Generate(cond.FalseStatements);
+                    Generate(cond.FalseStatement);
                     Write(DeclareLabel(EndIf(condId)));
                     PopLabel(ScopeType.Conditional);
                     break;
