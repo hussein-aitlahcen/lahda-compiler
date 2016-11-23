@@ -144,6 +144,7 @@ namespace Lahda.Parser
         */
         public AbstractStatementNode ForExpression()
         {
+            Symbols.PushScope();
             var data = ParentheseEnclosed(() => new ForExpressionData()
             {
                 Initialization = Statement(DeclarationExpression),
@@ -151,7 +152,8 @@ namespace Lahda.Parser
                 Iteration = AssignationExpression()
             });
             var stmt = NextStatement();
-            return new BlockNode(data.Initialization, new LoopNode(data.StopCondition, new BlockNode(stmt, data.Iteration)));
+            Symbols.PopScope();
+            return new BlockNode(data.Initialization, new LoopNode(data.StopCondition, data.Iteration, stmt));
         }
 
         /*

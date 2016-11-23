@@ -10,25 +10,32 @@ set 0
 ;--------
 .beginloop_0_1
 ;----------
-; if (0 Equals (i Greater 10))
+; if (i Less 10)
 ;----------
-push.f 0
 get 0
 push.f 10
-cmpgt.f
-cmpeq.f
+cmplt.f
 jumpf else_0_1
-;----------
-; i = (i Add 5)
-;----------
+;--------
+; print(i)
+;--------
 get 0
-push.f 5
-add.f
-set 0
+out.f
+push.i 10
+out.c
+jump iterloop_0_1
 jump endif_0_1
 .else_0_1
 jump endloop_0_1
 .endif_0_1
+.iterloop_0_1
+;----------
+; i = (i Add 1)
+;----------
+get 0
+push.f 1
+add.f
+set 0
 jump beginloop_0_1
 .endloop_0_1
 halt

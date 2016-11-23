@@ -173,6 +173,8 @@ namespace Lahda.Codegen
                     var loopId = CurrentLabel(ScopeType.Loop);
                     Write(DeclareLabel(BeginLoop(loopId)));
                     Generate(loop.Conditional);
+                    Write(DeclareLabel(IterationLoop(loopId)));
+                    Generate(loop.Iteration);
                     Write(Jump(BeginLoop(loopId)));
                     Write(DeclareLabel(EndLoop(loopId)));
                     PopLabel(ScopeType.Loop);
@@ -183,7 +185,7 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Continue:
-                    Write(Jump(BeginLoop(CurrentLabel(ScopeType.Loop))));
+                    Write(Jump(IterationLoop(CurrentLabel(ScopeType.Loop))));
                     break;
 
                 case NodeType.Conditional:
@@ -213,6 +215,7 @@ namespace Lahda.Codegen
         private string Else(string id) => $"else_{id}";
         private string EndIf(string id) => $"endif_{id}";
         private string BeginLoop(string id) => $"beginloop_{id}";
+        private string IterationLoop(string id) => $"iterloop_{id}";
         private string EndLoop(string id) => $"endloop_{id}";
         private string DeclareLabel(string label) => $".{label}";
     }
