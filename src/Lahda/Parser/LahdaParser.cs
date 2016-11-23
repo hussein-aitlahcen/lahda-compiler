@@ -24,7 +24,7 @@ namespace Lahda.Parser
 
         private void EnsureEndOfStatement()
         {
-            if (!IsValue(TokenType.SpecialCharacter, ";"))
+            if (!IsValue(TokenType.SpecialCharacter, Lexer.Configuration.EndOfStatement()))
             {
                 throw new InvalidOperationException($"end of statement {PeekToken()}");
             }
@@ -38,7 +38,7 @@ namespace Lahda.Parser
                 switch (token.Type)
                 {
                     case TokenType.Operator:
-                        if (token.Value == Operators.BRACE_OPEN)
+                        if (Lexer.Configuration.IsOperator(OperatorType.BraceOpen, token.Value))
                             return StatementsBlock();
                         break;
 
@@ -54,31 +54,18 @@ namespace Lahda.Parser
 
         public AbstractStatementNode DetermineKeywordExpression()
         {
-            if (IsKeyword(Keywords.VAR))
+            switch (GetKeywordType())
             {
-                return Statement(DeclarationExpression);
+                case KeywordType.Var: return Statement(DeclarationExpression);
+                case KeywordType.Print: return Statement(PrintExpression);
+                case KeywordType.While: return WhileExpression();
+                case KeywordType.For: return ForExpression();
+                case KeywordType.Do: return Statement(DoExpression);
+                case KeywordType.If: return ConditionalExpression();
+                case KeywordType.Break: return Statement(() => new BreakNode());
+                case KeywordType.Continue: return Statement(() => new ContinueNode());
             }
-            else if (IsKeyword(Keywords.PRINT))
-            {
-                return Statement(PrintExpression);
-            }
-            if (IsKeyword(Keywords.WHILE))
-            {
-                return WhileExpression();
-            }
-            else if (IsKeyword(Keywords.FOR))
-            {
-                return ForExpression();
-            }
-            else if (IsKeyword(Keywords.DO))
-            {
-                return Statement(DoExpression);
-            }
-            else if (IsKeyword(Keywords.IF))
-            {
-                return ConditionalExpression();
-            }
-            throw new InvalidOperationException($"keyword expression {PeekToken()}");
+            throw new InvalidOperationException($"keyword expected");
         }
 
         /*
@@ -106,44 +93,38 @@ namespace Lahda.Parser
         */
         public AbstractStatementNode DoExpression()
         {
-            var stmts = StatementsBlock();
-            if (IsKeyword(Keywords.WHILE))
+            var statement = NextStatement();
+            switch (GetKeywordType())
             {
-                return DoWhileExpression(stmts);
-            }
-            else if (IsKeyword(Keywords.UNTIL))
-            {
-                return DoUntilExpression(stmts);
-            }
-            else if (IsKeyword(Keywords.FOREVER))
-            {
-                return DoForeverExpression(stmts);
+                case KeywordType.While: return DoWhileExpression(statement);
+                case KeywordType.Until: return DoUntilExpression(statement);
+                case KeywordType.Forever: return DoForeverExpression(statement);
             }
             throw new InvalidOperationException("invalid do expression");
         }
 
-        public AbstractStatementNode DoWhileExpression(BlockNode stmts)
+        public AbstractStatementNode DoWhileExpression(AbstractStatementNode statement)
         {
             var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-            return new LoopNode(stopCondition, stmts);
+            return new LoopNode(stopCondition, statement);
         }
 
-        public AbstractStatementNode DoUntilExpression(BlockNode stmts)
+        public AbstractStatementNode DoUntilExpression(AbstractStatementNode statement)
         {
             var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-            return new LoopNode(stopCondition, stmts, true);
+            return new LoopNode(stopCondition, statement, true);
         }
 
-        public AbstractStatementNode DoForeverExpression(BlockNode stmts)
+        public AbstractStatementNode DoForeverExpression(AbstractStatementNode statement)
         {
-            return new LoopNode(new LiteralNode(1), stmts);
+            return new LoopNode(new LiteralNode(1), statement);
         }
 
         public AbstractStatementNode WhileExpression()
         {
             var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-            var stmts = StatementsBlock();
-            return new LoopNode(stopCondition, stmts);
+            var stmt = NextStatement();
+            return new LoopNode(stopCondition, stmt);
         }
 
         private class ForExpressionData
@@ -169,8 +150,8 @@ namespace Lahda.Parser
                 StopCondition = Statement(ArithmeticExpression),
                 Iteration = AssignationExpression()
             });
-            var stmts = StatementsBlock();
-            return new BlockNode(data.Initialization, new LoopNode(data.StopCondition, new BlockNode(stmts, data.Iteration)));
+            var stmt = NextStatement();
+            return new BlockNode(data.Initialization, new LoopNode(data.StopCondition, new BlockNode(stmt, data.Iteration)));
         }
 
         /*
@@ -187,11 +168,10 @@ namespace Lahda.Parser
         */
         public ConditionalNode ConditionalExpression()
         {
-            NextToken();
             var condition = ParentheseEnclosed(ArithmeticExpression);
             var trueStmts = NextStatement();
             AbstractStatementNode falseStmts = new BlockNode();
-            if (IsKeyword(Keywords.ELSE))
+            if (IsKeyword(KeywordType.Else))
             {
                 falseStmts = NextStatement();
             }
@@ -217,7 +197,10 @@ namespace Lahda.Parser
             {
                 var statements = new List<AbstractStatementNode>();
                 // Why we don't use IsOperator here ? Because we don't want to consume it, the 'BraceEnclosed' function will do it for us
-                while (PeekToken().Type != TokenType.Operator && ((ValueToken<string>)PeekToken()).Value != Operators.BRACE_CLOSE)
+                ValueToken<string> tok;
+                while ((tok = PeekToken() as ValueToken<string>) != null &&
+                        tok.Type != TokenType.Operator &&
+                        !Lexer.Configuration.IsOperator(OperatorType.BraceClose, tok.Value))
                 {
                     statements.Add(NextStatement());
                 }
@@ -230,27 +213,27 @@ namespace Lahda.Parser
         /*
             Simple overload, ensure that our function is surrounded by two parentheses.
         */
-        public T ParentheseEnclosed<T>(Func<T> fun) => Enclosed(Operators.PARENTHESE_OPEN, Operators.PARENTHESE_CLOSE, fun);
+        public T ParentheseEnclosed<T>(Func<T> fun) => Enclosed(OperatorType.ParentheseOpen, OperatorType.ParentheseClose, fun);
 
         /*
             Simple overload, ensure that our function is surrounded by two braces.
         */
-        public T BraceEnclosed<T>(Func<T> fun) => Enclosed(Operators.BRACE_OPEN, Operators.BRACE_CLOSE, fun);
+        public T BraceEnclosed<T>(Func<T> fun) => Enclosed(OperatorType.BraceOpen, OperatorType.BraceClose, fun);
 
         /*
             Ensure that the function will be enclosed by the openning/closing operators given :
             e.g. : Enclosed('(', ')', ArithmeticExpression) will ensure that our arithmetic expression is surrounded by ()
         */
-        public T Enclosed<T>(string open, string close, Func<T> fun)
+        public T Enclosed<T>(OperatorType open, OperatorType close, Func<T> fun)
         {
             if (!IsOperator(open))
             {
-                throw new InvalidOperationException($"missing enclosed begin operator: {open}");
+                throw new InvalidOperationException($"missing enclosed begin operator: expected={open}, obtained={PeekToken()}");
             }
             var value = fun();
             if (!IsOperator(close))
             {
-                throw new InvalidOperationException($"missing enclosed final operator: {close}");
+                throw new InvalidOperationException($"missing enclosed final operator: expected={close}, obtained={PeekToken()}");
             }
             return value;
         }
@@ -278,11 +261,11 @@ namespace Lahda.Parser
                 Pretty sad but in a for loop we know that our first statement will be a declaration, so, the 'var' keyword
                 won't be consumed, this line consume it when necessary.
             */
-            if (IsKeyword(Keywords.VAR)) ;
+            if (IsKeyword(KeywordType.Var)) ;
 
             var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"declaration identifier not found");
 
-            if (!IsValue(TokenType.Operator, Operators.ASSIGN))
+            if (!IsOperator(OperatorType.Assign))
                 throw new InvalidOperationException($"declaration operator missing {PeekToken()}");
 
             var expression = ArithmeticExpression();
@@ -303,14 +286,51 @@ namespace Lahda.Parser
         {
             var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"assignation identifier not found");
 
-            if (!IsValue(TokenType.Operator, Operators.ASSIGN))
-                throw new InvalidOperationException($"assignation operator missing");
+            var assignationOperators = new[]
+            {
+                OperatorType.Assign,
+                OperatorType.AddAssign,
+                OperatorType.SubAssign,
+                OperatorType.MulAssign,
+                OperatorType.DivAssign,
+                OperatorType.ModAssign
+            };
+
+            var op = assignationOperators.FirstOrDefault(IsOperator);
+            if (op == OperatorType.None)
+                throw new InvalidOperationException($"wrong assignation operator {PeekToken()}");
 
             var symbol = Symbols.Search(ident);
             if (symbol.IsUnknow)
                 throw new InvalidOperationException($"unknow symbol {ident}");
 
-            var expression = ArithmeticExpression();
+            AbstractExpressionNode expression = null;
+            switch (op)
+            {
+                case OperatorType.Assign:
+                    expression = ArithmeticExpression();
+                    break;
+
+                case OperatorType.AddAssign:
+                    expression = new OperationNode(OperatorType.Add, new IdentifierNode(symbol), ArithmeticExpression());
+                    break;
+
+                case OperatorType.SubAssign:
+                    expression = new OperationNode(OperatorType.Sub, new IdentifierNode(symbol), ArithmeticExpression());
+                    break;
+
+                case OperatorType.MulAssign:
+                    expression = new OperationNode(OperatorType.Mul, new IdentifierNode(symbol), ArithmeticExpression());
+                    break;
+
+                case OperatorType.DivAssign:
+                    expression = new OperationNode(OperatorType.Div, new IdentifierNode(symbol), ArithmeticExpression());
+                    break;
+
+                case OperatorType.ModAssign:
+                    expression = new OperationNode(OperatorType.Mod, new IdentifierNode(symbol), ArithmeticExpression());
+                    break;
+            }
 
             return new AssignationNode(new IdentifierNode(symbol), expression);
         }
@@ -336,56 +356,56 @@ namespace Lahda.Parser
         }
 
         // Retrieve the operators that belong to the arithmetic level
-        private IEnumerable<string> GetOperators(ArithmeticLevel level)
+        private IEnumerable<OperatorType> GetOperators(ArithmeticLevel level)
         {
             switch (level)
             {
                 case ArithmeticLevel.Divisible:
-                    yield return Operators.DIV;
+                    yield return OperatorType.Div;
                     break;
 
                 case ArithmeticLevel.Multiplicative:
-                    yield return Operators.MOD;
-                    yield return Operators.MUL;
+                    yield return OperatorType.Mod;
+                    yield return OperatorType.Mul;
                     break;
 
                 case ArithmeticLevel.Additive:
-                    yield return Operators.ADD;
-                    yield return Operators.SUB;
+                    yield return OperatorType.Add;
+                    yield return OperatorType.Sub;
                     break;
 
                 case ArithmeticLevel.BitwiseAnd:
-                    yield return Operators.AND;
+                    yield return OperatorType.BitwiseAnd;
                     break;
 
                 case ArithmeticLevel.BitwiseOr:
-                    yield return Operators.OR;
+                    yield return OperatorType.BitwiseOr;
                     break;
 
                 case ArithmeticLevel.Comparative:
-                    yield return Operators.EQUALS;
-                    yield return Operators.NOT_EQUALS;
-                    yield return Operators.GREATER;
-                    yield return Operators.NOT_GREATER;
-                    yield return Operators.LESS;
-                    yield return Operators.NOT_LESS;
+                    yield return OperatorType.Equals;
+                    yield return OperatorType.NotEquals;
+                    yield return OperatorType.Greater;
+                    yield return OperatorType.NotGreater;
+                    yield return OperatorType.Less;
+                    yield return OperatorType.NotLess;
                     break;
 
                 case ArithmeticLevel.LogicalAnd:
-                    yield return Operators.ANDALSO;
+                    yield return OperatorType.AndAlso;
                     break;
 
                 case ArithmeticLevel.LogicalOr:
-                    yield return Operators.ORELSE;
+                    yield return OperatorType.OrElse;
                     break;
             }
         }
 
         // If we find an operator on the right, we produce a new operation node, otherwise, the primitive will be returned
-        private AbstractExpressionNode ExecuteIfOperator(AbstractExpressionNode prime, Func<AbstractExpressionNode> operation, IEnumerable<string> operators)
+        private AbstractExpressionNode ExecuteIfOperator(AbstractExpressionNode prime, Func<AbstractExpressionNode> operation, IEnumerable<OperatorType> operators)
         {
             var op = operators.FirstOrDefault(IsOperator);
-            if (op != null)
+            if (op != OperatorType.None)
             {
                 return new OperationNode(op, prime, operation());
             }
@@ -407,11 +427,11 @@ namespace Lahda.Parser
             {
                 case TokenType.Keyword:
                     // boolean expressions are transformed into arithmetics ones
-                    if (IsKeyword(Keywords.TRUE))
+                    if (IsKeyword(KeywordType.True))
                     {
                         return new LiteralNode(1);
                     }
-                    else if (IsKeyword(Keywords.FALSE))
+                    else if (IsKeyword(KeywordType.False))
                     {
                         return new LiteralNode(0);
                     }
@@ -431,23 +451,53 @@ namespace Lahda.Parser
                     return new IdentifierNode(symbol);
 
                 case TokenType.Operator:
-                    // here is the recursive call of our arithmetic function
-                    return ParentheseEnclosed(ArithmeticExpression);
+                    var op = ((ValueToken<string>)token).Value;
+                    switch (Lexer.Configuration.GetOperatorType(op))
+                    {
+                        case OperatorType.ParentheseOpen:
+                            // here is the recursive call of our arithmetic function
+                            return ParentheseEnclosed(ArithmeticExpression);
+
+                        case OperatorType.Sub:
+                            NextToken();
+                            return new OperationNode(OperatorType.Sub, new LiteralNode(0), ArithmeticPrimitive());
+
+                        // negate the expression
+                        case OperatorType.Negate:
+                            NextToken();
+                            return new OperationNode(OperatorType.Equals, new LiteralNode(0), ArithmeticPrimitive());
+
+                    }
+                    break;
             }
-            throw new InvalidOperationException("arithmetic primitive");
+            throw new InvalidOperationException($"arithmetic primitive unknow type {token}");
         }
 
         private bool IsType(TokenType type) => PeekToken().Type == type;
 
-        private bool IsKeyword(string op) => IsValue<string>(TokenType.Keyword, op);
+        private bool IsKeyword(KeywordType key) => IsValue<string>(TokenType.Keyword, Lexer.Configuration.GetKeyword(key));
 
-        private bool IsOperator(string op) => IsValue<string>(TokenType.Operator, op);
+        private bool IsOperator(OperatorType op) => IsValue<string>(TokenType.Operator, Lexer.Configuration.GetOperator(op));
+
+        private OperatorType GetOperatorType() => Lexer.Configuration.GetOperatorType(GetTokenValueSilent<string>(TokenType.Operator));
+
+        private KeywordType GetKeywordType() => Lexer.Configuration.GetKeywordType(GetTokenValueSilent<string>(TokenType.Keyword));
+
+        private T GetTokenValueSilent<T>(TokenType type, T def = default(T))
+        {
+            try
+            {
+                return GetTokenValueOrThrow<T>(type, "");
+            }
+            catch (Exception e) { }
+            return def;
+        }
 
         private T GetTokenValueOrThrow<T>(TokenType type, string exceptionMessage)
         {
             var tok = PeekToken();
             var casted = tok as ValueToken<T>;
-            if (casted == null)
+            if (casted == null || tok.Type != type)
             {
                 throw new InvalidOperationException($"unexpected token type: {tok.Type}, expected: {type}, msg: {exceptionMessage}");
             }

@@ -1,7 +1,8 @@
 namespace Lahda.Lexer
 {
-    public interface ILexer 
+    public interface ILexer
     {
+        CompilationConfiguration Configuration { get; }
         IToken NextToken();
         IToken PeekToken();
     }

@@ -4,12 +4,12 @@ namespace Lahda.Lexer
     {
         public TokenType Type { get; }
         public TokenPosition Position { get; }
-        public Token(TokenType type, TokenPosition position) 
+        public Token(TokenType type, TokenPosition position)
         {
             Type = type;
             Position = position;
         }
 
-        public override string ToString() => $"tok<{Type}, {Position}>";
+        public override string ToString() => $"tok ({Type}, {Position})";
     }
 }

@@ -1,0 +1,34 @@
+namespace Lahda
+{
+    public enum OperatorType
+    {
+        None,
+        BitwiseOr,
+        OrElse,
+        BitwiseAnd,
+        AndAlso,
+        Add,
+        Sub,
+        Mul,
+        Div,
+        Mod,
+        ParentheseOpen,
+        ParentheseClose,
+        BraceOpen,
+        BraceClose,
+        Pow,
+        Equals,
+        NotEquals,
+        Greater,
+        Less,
+        NotLess,
+        NotGreater,
+        Negate,
+        Assign,
+        AddAssign,
+        SubAssign,
+        MulAssign,
+        DivAssign,
+        ModAssign,
+    }
+}

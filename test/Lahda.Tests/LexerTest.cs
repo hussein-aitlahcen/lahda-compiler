@@ -8,7 +8,7 @@ namespace Lahda.Tests
     public sealed class LexerTest
     {
         private ILexer BuildLexer(string content) =>
-            new LahdaLexer(CodeSource.FromMemory(content));
+            new LahdaLexer(new CompilationConfiguration(CodeSource.FromMemory(content)));
 
         private IToken SingleToken(string content) =>
             BuildLexer(content).NextToken();
@@ -18,6 +18,14 @@ namespace Lahda.Tests
 
         private void AssertSingleTokenType(TokenType type, string content) =>
             AssertTokenType(type, SingleToken(content));
+
+        private void AssertOperatorSupported(OperatorType type)
+        {
+            var lexer = BuildLexer("");
+            var op = lexer.Configuration.GetOperator(type);
+            Assert.NotEmpty(op);
+            AssertSingleTokenType(TokenType.Operator, op);
+        }
 
         [Theory]
         [InlineData("")]
@@ -41,7 +49,6 @@ namespace Lahda.Tests
         [InlineData("for")]
         [InlineData("while")]
         [InlineData("var")]
-        [InlineData("int")]
         [InlineData("float")]
         [InlineData("string")]
         public void Lexer_should_parse_keyword(string keyword) =>
@@ -69,29 +76,36 @@ namespace Lahda.Tests
             AssertSingleTokenType(TokenType.Floating, value);
 
         [Theory]
-        [InlineData(Operators.ADD)]
-        [InlineData(Operators.SUB)]
-        [InlineData(Operators.MUL)]
-        [InlineData(Operators.DIV)]
-        [InlineData(Operators.MOD)]
-        [InlineData(Operators.PARENTHESE_OPEN)]
-        [InlineData(Operators.PARENTHESE_CLOSE)]
-        [InlineData(Operators.BRACE_CLOSE)]
-        [InlineData(Operators.BRACE_OPEN)]
-        [InlineData(Operators.AND)]
-        [InlineData(Operators.OR)]
-        [InlineData(Operators.ANDALSO)]
-        [InlineData(Operators.ORELSE)]
-        [InlineData(Operators.POW)]
-        [InlineData(Operators.EQUALS)]
-        [InlineData(Operators.NOT_EQUALS)]
-        [InlineData(Operators.LESS)]
-        [InlineData(Operators.GREATER)]
-        [InlineData(Operators.NOT_GREATER)]
-        [InlineData(Operators.NOT_LESS)]
-        [InlineData(Operators.ASSIGN)]
-        public void Lexer_should_parse_operator(string value) =>
-            AssertSingleTokenType(TokenType.Operator, value);
+        [InlineData(OperatorType.AddAssign)]
+        [InlineData(OperatorType.SubAssign)]
+        [InlineData(OperatorType.DivAssign)]
+        [InlineData(OperatorType.MulAssign)]
+        [InlineData(OperatorType.ModAssign)]
+        [InlineData(OperatorType.Add)]
+        [InlineData(OperatorType.Sub)]
+        [InlineData(OperatorType.Mul)]
+        [InlineData(OperatorType.Div)]
+        [InlineData(OperatorType.Mod)]
+        [InlineData(OperatorType.ParentheseOpen)]
+        [InlineData(OperatorType.ParentheseClose)]
+        [InlineData(OperatorType.BraceClose)]
+        [InlineData(OperatorType.BraceOpen)]
+        [InlineData(OperatorType.BitwiseAnd)]
+        [InlineData(OperatorType.BitwiseOr)]
+        [InlineData(OperatorType.AndAlso)]
+        [InlineData(OperatorType.OrElse)]
+        [InlineData(OperatorType.Pow)]
+        [InlineData(OperatorType.Equals)]
+        [InlineData(OperatorType.NotEquals)]
+        [InlineData(OperatorType.Less)]
+        [InlineData(OperatorType.Greater)]
+        [InlineData(OperatorType.NotGreater)]
+        [InlineData(OperatorType.NotLess)]
+        [InlineData(OperatorType.Assign)]
+        [InlineData(OperatorType.Negate)]
+
+        public void Lexer_should_parse_operator(OperatorType type) =>
+            AssertOperatorSupported(type);
 
         [Theory]
         [InlineData("(2+5*2)", new[]

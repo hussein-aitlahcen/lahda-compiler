@@ -4,12 +4,12 @@ namespace Lahda.Lexer
     {
         public T Value { get; }
 
-        public ValueToken(TokenType type, TokenPosition position, T value) 
+        public ValueToken(TokenType type, TokenPosition position, T value)
             : base(type, position)
         {
             Value = value;
         }
 
-        public override string ToString() => $"val<{base.ToString()}, {Value}>";
+        public override string ToString() => $"val({base.ToString()}, {Value})";
     }
 }

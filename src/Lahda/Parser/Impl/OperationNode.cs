@@ -1,5 +1,4 @@
 using System;
-using Lahda.Lexer;
 
 namespace Lahda.Parser.Impl
 {
@@ -7,9 +6,9 @@ namespace Lahda.Parser.Impl
     {
         public AbstractExpressionNode Left { get; private set; }
         public AbstractExpressionNode Right { get; private set; }
-        public string Operator { get; set; }
+        public OperatorType Operator { get; set; }
 
-        public OperationNode(string op, AbstractExpressionNode left, AbstractExpressionNode right)
+        public OperationNode(OperatorType op, AbstractExpressionNode left, AbstractExpressionNode right)
             : base(NodeType.Operation)
         {
             Operator = op;
@@ -27,22 +26,22 @@ namespace Lahda.Parser.Impl
             {
                 switch (Operator)
                 {
-                    case Operators.ADD: return new LiteralNode(leftLit.Value + rightLit.Value);
-                    case Operators.MUL: return new LiteralNode(leftLit.Value * rightLit.Value);
-                    case Operators.SUB: return new LiteralNode(leftLit.Value - rightLit.Value);
-                    case Operators.DIV: return new LiteralNode(leftLit.Value / rightLit.Value);
-                    case Operators.AND: return new LiteralNode((int)leftLit.Value & (int)rightLit.Value);
-                    case Operators.OR: return new LiteralNode((int)leftLit.Value | (int)rightLit.Value);
-                    case Operators.ANDALSO: return new LiteralNode(leftLit.Value != 0 && rightLit.Value != 0 ? 1f : 0f);
-                    case Operators.ORELSE: return new LiteralNode(leftLit.Value != 0 || rightLit.Value != 0 ? 1f : 0f);
-                    case Operators.MOD: return new LiteralNode(leftLit.Value % rightLit.Value);
-                    case Operators.GREATER: return new LiteralNode(leftLit.Value > rightLit.Value ? 1f : 0f);
-                    case Operators.NOT_GREATER: return new LiteralNode(leftLit.Value <= rightLit.Value ? 1f : 0f);
-                    case Operators.LESS: return new LiteralNode(leftLit.Value < rightLit.Value ? 1f : 0f);
-                    case Operators.NOT_LESS: return new LiteralNode(leftLit.Value >= rightLit.Value ? 1f : 0f);
-                    case Operators.EQUALS: return new LiteralNode(leftLit.Value == rightLit.Value ? 1f : 0f);
-                    case Operators.NOT_EQUALS: return new LiteralNode(leftLit.Value != rightLit.Value ? 1f : 0f);
-                    case Operators.POW: return new LiteralNode((float)Math.Pow(leftLit.Value, rightLit.Value));
+                    case OperatorType.Add: return new LiteralNode(leftLit.Value + rightLit.Value);
+                    case OperatorType.Mul: return new LiteralNode(leftLit.Value * rightLit.Value);
+                    case OperatorType.Sub: return new LiteralNode(leftLit.Value - rightLit.Value);
+                    case OperatorType.Div: return new LiteralNode(leftLit.Value / rightLit.Value);
+                    case OperatorType.BitwiseAnd: return new LiteralNode((int)leftLit.Value & (int)rightLit.Value);
+                    case OperatorType.BitwiseOr: return new LiteralNode((int)leftLit.Value | (int)rightLit.Value);
+                    case OperatorType.AndAlso: return new LiteralNode(leftLit.Value != 0 && rightLit.Value != 0 ? 1f : 0f);
+                    case OperatorType.OrElse: return new LiteralNode(leftLit.Value != 0 || rightLit.Value != 0 ? 1f : 0f);
+                    case OperatorType.Mod: return new LiteralNode(leftLit.Value % rightLit.Value);
+                    case OperatorType.Greater: return new LiteralNode(leftLit.Value > rightLit.Value ? 1f : 0f);
+                    case OperatorType.NotGreater: return new LiteralNode(leftLit.Value <= rightLit.Value ? 1f : 0f);
+                    case OperatorType.Less: return new LiteralNode(leftLit.Value < rightLit.Value ? 1f : 0f);
+                    case OperatorType.NotLess: return new LiteralNode(leftLit.Value >= rightLit.Value ? 1f : 0f);
+                    case OperatorType.Equals: return new LiteralNode(leftLit.Value == rightLit.Value ? 1f : 0f);
+                    case OperatorType.NotEquals: return new LiteralNode(leftLit.Value != rightLit.Value ? 1f : 0f);
+                    case OperatorType.Pow: return new LiteralNode((float)Math.Pow(leftLit.Value, rightLit.Value));
                 }
             }
             return this;

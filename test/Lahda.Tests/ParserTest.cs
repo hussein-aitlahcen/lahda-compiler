@@ -1,5 +1,4 @@
 using System;
-using Lahda.Lexer;
 using Lahda.Lexer.Impl;
 using Lahda.Parser;
 using Xunit;
@@ -10,12 +9,13 @@ namespace Lahda.Tests
     {
         private LahdaParser GetParser(string content)
         {
-            return new LahdaParser(new LahdaLexer(CodeSource.FromMemory(content)));
+            return new LahdaParser(new LahdaLexer(new CompilationConfiguration(CodeSource.FromMemory(content))));
         }
 
         [Theory]
         [InlineData("2+5")]
         [InlineData("3*(2+5)/2.e+8")]
+        [InlineData("3*(2+5)%2.e+8")]
         [InlineData("3*((2+5)/2.e+8)/.5")]
         public void Parser_should_parse_expression(string content)
         {
@@ -32,7 +32,7 @@ namespace Lahda.Tests
         }
 
         [Theory]
-        [InlineData("true || false")]
+        [InlineData("true || false || !true")]
         [InlineData("false || false")]
         [InlineData("false || true")]
         [InlineData("true || true")]
@@ -41,7 +41,7 @@ namespace Lahda.Tests
         [InlineData("false && true")]
         [InlineData("false && false")]
         [InlineData("(1+2) == 3 && false")]
-        [InlineData("(1+2) > 2 && (1/5 == 2)")]
+        [InlineData("(1+2) > 2 && (1/5 == 2) && !(5 * 2 > 5)")]
         [InlineData("(1+2) >= 2 && true && (1/5 <= 2)")]
         [InlineData("2 + 5 != 7 && 1 > 2")]
         public void Parser_should_parse_boolean_expression(string content)
@@ -51,9 +51,9 @@ namespace Lahda.Tests
         }
 
         [Theory]
-        [InlineData("var y = 2; y = 5;")]
-        [InlineData("var m_currentIndex = 8; m_currentIndex = m_currentIndex + 8;")]
-        [InlineData("var i = 1; i = 0;")]
+        [InlineData("{ var y = 2; y = 5; }")]
+        [InlineData("{ var m_currentIndex = 8; m_currentIndex = m_currentIndex + 8; }")]
+        [InlineData("{ var i = 1; i = 0; }")]
         public void Parser_should_parse_assignations(string content)
         {
             var parser = GetParser(content);
@@ -79,7 +79,11 @@ namespace Lahda.Tests
         }
 
         [Theory]
-        [InlineData("var x = 1; var z = 2; if(x > 2 && 3 && m_index <= z) { var yo = 2; yo = yo / 4; } else { z = 211111; }")]
+        [InlineData("{ var x = 1; var m_index = 0; var z = 2; if(x > 2 && 3 && m_index <= z) { var yo = 2; yo = yo / 4; } else { z = 211111; } }")]
+        [InlineData("{ var x = 1; if(x) x = 5; }")]
+        [InlineData("{ var x = 1; if(x) while(5) { } else x = 1; }")]
+        [InlineData("{ var x = 1; if(x) { } else x = 1; }")]
+        [InlineData("{ var x = 1; if(x) x = 0; else { } }")]
         public void Parser_should_parse_conditional(string content)
         {
             var parser = GetParser(content);
@@ -87,12 +91,25 @@ namespace Lahda.Tests
         }
 
         [Theory]
-        [InlineData("for(var i = 0; i < 5; i = i + 1) { var x = 2; x = x + 2; }")]
-        [InlineData("var y = 2; while(y < 5) { var x = x * 5; y = y + 1; }")]
-        [InlineData("do { var x = 1 + 2; } while(3);")]
-        [InlineData("do { var yo = 2; } until(5 == 5);")]
-        [InlineData("do { var mdr = 2 / 2 % 5; } forever;")]
+        [InlineData("{ for(var i = 0; i < 5; i = i + 1) print i; }")]
+        [InlineData("{ for(var i = 0; i < 5; i = i + 1) { var x = 2; x = x + 2; } }")]
+        [InlineData("{ var y = 2; var x = 1; while(y < 5) { var x = x * 5; y = y + 1; } }")]
+        [InlineData("{ do { var x = 1 + 2; } while(3); }")]
+        [InlineData("{ do { var yo = 2; } until(5 == 5); }")]
+        [InlineData("{ do { var mdr = 2 / 2 % 5; } forever; }")]
+        [InlineData("{ var i = 0; do i = i + 1; forever; }")]
+        [InlineData("{ var i = 0; do i = i + 1; while(i < 5); }")]
         public void Parser_should_parse_loops(string content)
+        {
+            var parser = GetParser(content);
+            var node = parser.NextStatement();
+        }
+
+        [Theory]
+        [InlineData("for(var i = 0; i < 5; i += 1) break;")]
+        [InlineData("{ var x = 1; do { if(x) break; else x += 1; } forever; }")]
+        [InlineData("{ var x = 1; do { if(x) break; else x += 1; } forever; }")]
+        public void Parser_should_parse_loop_controls(string content)
         {
             var parser = GetParser(content);
             var node = parser.NextStatement();

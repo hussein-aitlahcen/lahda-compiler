@@ -25,7 +25,7 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 
 * **Floating** = `(((([0-9]+\\.[0-9]*)|([0-9]*\\.[0-9]+))([Ee][+-]?[0-9]+)?)|([0-9]+([Ee][+-]?[0-9]+)))`
 * **Bool** = *`true`* | *`false`*
-* **Primitive** = Floating | Bool | Identifier | `-` Primitive | *`(`* Expression *`)`*
+* **Primitive** = Floating | Bool | Identifier | `-` Primitive | *`!`* Primitive | *`(`* Expression *`)`*
 * **Divisible** = Primitive (*`/`* Divisible)?
 * **Multiplicative** = Divisible (`*` Multiplicative)?
 * **Additive** = Multiplicative ((*`+`* | *`-`*) Additive)?
@@ -41,15 +41,18 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 * **Identifier** = `([A-Za-z][A-Za-z0-9_]*)`
 * **Assignation** = Identifier *`=`* Expression
 * **Declaration** = *`var`* Assignation
+* **LoopControl** = `continue` | `break`
+* **Inline** = (Assignation | Declaration | LoopControl) StatementEnd
 * **Block** = *`{`* Statement\* *`}`*
-* **Conditional** *`if`* *`(`* Expression *`)`* Statement (*`else`* Statement)?
+* **Conditional** = *`if`* *`(`* Expression *`)`* Statement (*`else`* Statement)?
 * **Loop** =
   * *`while`* *`(`* Expression *`)`* Statement |
   * *`for`* *`(`* Declaration ; Expression ; Assignation *`)`* Block |
-  * *`do`* Block *`while`* *`(`* Expression *`)`* ; |
-  * *`do`* Block *`until`* *`(`* Expression *`)`* ; |
+  * *`do`* Block *`while`* *`(`* Expression *`)`* StatementEnd |
+  * *`do`* Block *`until`* *`(`* Expression *`)`* StatementEnd |
   * *`do`* Block *`forever`* ;
-* **Statement** = Declaration ; | Assignation ; | Loop | Block | ;
+* **StatementEnd** = ;
+* **Statement** = Inline | Loop | Block | StatementEnd
 
 ### Example
 

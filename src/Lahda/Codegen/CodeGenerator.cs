@@ -50,10 +50,10 @@ namespace Lahda.Codegen
                     // Operations that require two integer as input
                     var integerOperations = new[]
                     {
-                        Operators.AND,
-                        Operators.ANDALSO,
-                        Operators.OR,
-                        Operators.ORELSE
+                        OperatorType.BitwiseAnd,
+                        OperatorType.AndAlso,
+                        OperatorType.BitwiseOr,
+                        OperatorType.OrElse
                     };
 
                     /*
@@ -72,46 +72,49 @@ namespace Lahda.Codegen
 
                     switch (operation.Operator)
                     {
-                        case Operators.ADD:
+                        case OperatorType.Add:
                             Write("add.f");
                             break;
-                        case Operators.SUB:
+                        case OperatorType.Sub:
                             Write("sub.f");
                             break;
-                        case Operators.MUL:
+                        case OperatorType.Mul:
                             Write("mul.f");
                             break;
-                        case Operators.DIV:
+                        case OperatorType.Div:
                             Write("div.f");
                             break;
-                        case Operators.AND:
-                        case Operators.ANDALSO:
+                        case OperatorType.BitwiseAnd:
+                        case OperatorType.AndAlso:
                             Write("and");
                             break;
-                        case Operators.OR:
-                        case Operators.ORELSE:
+                        case OperatorType.BitwiseOr:
+                        case OperatorType.OrElse:
                             Write("or");
                             break;
-                        case Operators.EQUALS:
+                        case OperatorType.Equals:
                             Write("cmpeq.f");
                             break;
-                        case Operators.NOT_EQUALS:
+                        case OperatorType.NotEquals:
                             Write("cmpne.f");
                             break;
-                        case Operators.NOT_GREATER:
+                        case OperatorType.NotGreater:
                             Write("cmple.f");
                             break;
-                        case Operators.LESS:
+                        case OperatorType.Less:
                             Write("cmplt.f");
                             break;
-                        case Operators.NOT_LESS:
+                        case OperatorType.NotLess:
                             Write("cmpge.f");
                             break;
-                        case Operators.GREATER:
+                        case OperatorType.Greater:
                             Write("cmpgt.f");
                             break;
-                        case Operators.MOD:
-
+                        case OperatorType.Mod:
+                            // TODO: modulo
+                            break;
+                        case OperatorType.Pow:
+                            // TODO: pow
                             break;
                     }
                     if (requireInteger)
@@ -120,9 +123,9 @@ namespace Lahda.Codegen
 
                 case NodeType.Declaration:
                     var decl = (DeclarationNode)node;
-                    Write("----------");
-                    Write($" var {decl.Identifier.Symbol.Name} = {decl.Expression}");
-                    Write("----------");
+                    Write(";----------");
+                    Write($"; var {decl.Identifier.Symbol.Name} = {decl.Expression}");
+                    Write(";----------");
                     Write("push.f 0");
                     Generate(decl.Expression);
                     Write($"set {decl.Identifier.Symbol.Pointer}");
@@ -130,9 +133,9 @@ namespace Lahda.Codegen
 
                 case NodeType.Assignation:
                     var assign = (AssignationNode)node;
-                    Write("----------");
-                    Write($" {assign.Identifier.Symbol.Name} = {assign.Expression}");
-                    Write("----------");
+                    Write(";----------");
+                    Write($"; {assign.Identifier.Symbol.Name} = {assign.Expression}");
+                    Write(";----------");
                     Generate(assign.Expression);
                     Write($"set {assign.Identifier.Symbol.Pointer}");
                     break;
@@ -149,23 +152,27 @@ namespace Lahda.Codegen
 
                 case NodeType.Print:
                     var print = (PrintNode)node;
-                    Write("--------");
-                    Write($" print({print.Expression})");
-                    Write("--------");
+                    Write(";--------");
+                    Write($"; print({print.Expression})");
+                    Write(";--------");
                     Generate(print.Expression);
                     Write("out.f");
+
+                    // make sure we get to a new line after the print
+                    Write("push.i 10");
+                    Write("out.c");
                     break;
 
                 case NodeType.Loop:
                     var loop = (LoopNode)node;
-                    Write("--------");
-                    Write(" loop");
-                    Write("--------");
+                    Write(";--------");
+                    Write("; loop");
+                    Write(";--------");
                     IncrementLabel(ScopeType.Loop);
                     PushLabel(ScopeType.Loop);
                     var loopId = CurrentLabel(ScopeType.Loop);
                     Write(DeclareLabel(BeginLoop(loopId)));
-                    Generate(loop.Cond);
+                    Generate(loop.Conditional);
                     Write(Jump(BeginLoop(loopId)));
                     Write(DeclareLabel(EndLoop(loopId)));
                     PopLabel(ScopeType.Loop);
@@ -181,9 +188,9 @@ namespace Lahda.Codegen
 
                 case NodeType.Conditional:
                     var cond = (ConditionalNode)node;
-                    Write("----------");
-                    Write($" if {cond.Expression}");
-                    Write("----------");
+                    Write(";----------");
+                    Write($"; if {cond.Expression}");
+                    Write(";----------");
                     IncrementLabel(ScopeType.Conditional);
                     PushLabel(ScopeType.Conditional);
                     var condId = CurrentLabel(ScopeType.Conditional);
