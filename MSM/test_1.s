@@ -10,13 +10,11 @@ set 0
 ;--------
 .beginloop_0_1
 ;----------
-; if (0 Equals (i NotLess 10))
+; if (i Less 10)
 ;----------
-push.f 0
 get 0
 push.f 10
-cmpge.f
-cmpeq.f
+cmplt.f
 jumpf else_0_1
 ;--------
 ; print(i)

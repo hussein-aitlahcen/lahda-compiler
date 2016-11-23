@@ -39,8 +39,9 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 ### Statements
 
 * **Identifier** = `([A-Za-z][A-Za-z0-9_]*)`
-* **Assignation** = Identifier *`=`* Expression
-* **Declaration** = *`var`* Assignation
+* **AssignOperator** = *`+=`* | *`-=`* | *`*=`* | *`/=`* | *`%=`* | *`^=`*
+* **Assignation** = Identifier AssignOperator Expression
+* **Declaration** = *`var`* *`=`* Expression
 * **LoopControl** = `continue` | `break`
 * **Inline** = (Assignation | Declaration | LoopControl) StatementEnd
 * **Block** = *`{`* Statement\* *`}`*

@@ -155,7 +155,7 @@ namespace Lahda.Parser
         }
 
         /*
-            Read a conditional expression (optional 'else' keyword followeb by a statements block).
+            Read a conditional expression (optional 'else' keyword followed by a statements block).
             e.g. :
             if(x < 10 && y > 5) 
             {
@@ -196,7 +196,7 @@ namespace Lahda.Parser
             var stmts = BraceEnclosed(() =>
             {
                 var statements = new List<AbstractStatementNode>();
-                // Why we don't use IsOperator here ? Because we don't want to consume it, the 'BraceEnclosed' function will do it for us
+                // Why don't we use IsOperator here ? Because we don't want to consume it, the 'BraceEnclosed' function will do it for us
                 ValueToken<string> tok;
                 while ((tok = PeekToken() as ValueToken<string>) != null &&
                         tok.Type != TokenType.Operator &&

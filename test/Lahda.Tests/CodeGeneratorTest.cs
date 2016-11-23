@@ -10,7 +10,7 @@ namespace Lahda.Tests
     public sealed class CodeGeneratorTest
     {
         [Theory]
-        [InlineData("for(var i = 0; !(i >= -(-10)); i += 1) print i;", 1)]
+        [InlineData("for(var i = 0; i < -(-(-(-10))); i += 1) print i;", 1)]
         [InlineData("{ var i = 0; while(!(i > 10)) i += 5; }", 2)]
         public void CodeGenerator_should_generate_godlike_code(string content, int i)
         {
