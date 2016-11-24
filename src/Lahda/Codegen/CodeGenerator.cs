@@ -15,6 +15,8 @@ namespace Lahda.Codegen
 
         private string CurrentLabel(ScopeType type) => Labels[type].CurrentLabel;
 
+        private int PointerIndex { get; set; }
+
         public CodeGenerator(ICodeOutput output, AbstractNode rootNode)
         {
             Output = output;
@@ -26,7 +28,7 @@ namespace Lahda.Codegen
         public void Build()
         {
             Write(".start");
-            Generate(RootNode);
+            InitGenerate(RootNode);
             Write("halt");
         }
 
@@ -41,6 +43,52 @@ namespace Lahda.Codegen
         private void PushLabel(ScopeType type) => Labels[type].Push(0);
         private void IncrementLabel(ScopeType type) => Labels[type].Increment();
         private int PopLabel(ScopeType type) => Labels[type].Pop();
+
+        private void InitGenerate(AbstractNode node)
+        {
+            PointerIndex = -1;
+            PreGenerate(node);
+            Generate(node);
+        }
+
+        private void PreGenerate(AbstractNode node)
+        {
+            switch (node.Type)
+            {
+                case NodeType.Block:
+                    ((BlockNode)node).Statements.ForEach(PreGenerate);
+                    break;
+
+                case NodeType.Operation:
+                    var operation = (OperationNode)node;
+                    PreGenerate(operation.Left);
+                    PreGenerate(operation.Right);
+                    break;
+
+                case NodeType.Declaration:
+                    var decl = (DeclarationNode)node;
+                    Debug($"@{decl.Identifier.Symbol.Name} = {decl.Identifier.Symbol.Pointer}");
+                    if (decl.Identifier.Symbol.Pointer > PointerIndex)
+                    {
+                        PointerIndex++;
+                        Write($"push.f 0");
+                    }
+                    break;
+
+                case NodeType.Loop:
+                    var loop = (LoopNode)node;
+                    PreGenerate(loop.Conditional);
+                    PreGenerate(loop.Iteration);
+                    break;
+
+                case NodeType.Conditional:
+                    var cond = (ConditionalNode)node;
+                    PreGenerate(cond.Expression);
+                    PreGenerate(cond.TrueStatement);
+                    PreGenerate(cond.FalseStatement);
+                    break;
+            }
+        }
 
         private void Generate(AbstractNode node)
         {
@@ -139,7 +187,6 @@ namespace Lahda.Codegen
 
                 case NodeType.Declaration:
                     var decl = (DeclarationNode)node;
-                    Write("push.f 0");
                     Generate(decl.Expression);
                     Write($"set {decl.Identifier.Symbol.Pointer}");
                     break;

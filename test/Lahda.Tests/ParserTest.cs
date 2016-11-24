@@ -72,6 +72,7 @@ namespace Lahda.Tests
 
         [Theory]
         [InlineData("{ var x = 2; x = x + 2; var m_index = x * 8; }")]
+        [InlineData("{ {} }")]
         public void Parser_should_parse_statements_block(string content)
         {
             var parser = GetParser(content);

@@ -142,9 +142,8 @@ namespace Lahda.Parser
                 x = x + 2;
             }
         */
-        public BlockNode ForExpression()
-        {
-            return Scoped(() =>
+        public BlockNode ForExpression() =>
+            Scoped(() =>
             {
                 var data = ParentheseEnclosed(() => new ForExpressionData()
                 {
@@ -155,7 +154,6 @@ namespace Lahda.Parser
                 var stmt = NextStatement();
                 return new BlockNode(data.Initialization, new LoopNode(data.StopCondition, data.Iteration, stmt));
             });
-        }
 
         /*
             Read a conditional expression (optional 'else' keyword followed by a statements block).
@@ -193,23 +191,21 @@ namespace Lahda.Parser
                 print x;
             }
         */
-        public BlockNode StatementsBlock()
-        {
-            var stmts = Scoped(() => BraceEnclosed(() =>
+        public BlockNode StatementsBlock() =>
+            Scoped(() => BraceEnclosed(() =>
             {
                 var statements = new List<AbstractStatementNode>();
                 // Why don't we use IsOperator here ? Because we don't want to consume it, the 'BraceEnclosed' function will do it for us
                 ValueToken<string> tok;
                 while ((tok = PeekToken() as ValueToken<string>) != null &&
-                        tok.Type != TokenType.Operator &&
-                        !Lexer.Configuration.IsOperator(OperatorType.BraceClose, tok.Value))
+                        (tok.Type != TokenType.Operator ||
+                        !Lexer.Configuration.IsOperator(OperatorType.BraceClose, tok.Value)))
                 {
                     statements.Add(NextStatement());
                 }
-                return statements;
+                return new BlockNode(statements);
             }));
-            return new BlockNode(stmts);
-        }
+
 
         /*
             Execute the given function in a new scope.

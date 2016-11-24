@@ -1,17 +1,17 @@
 .start
 ;----------
-; DECL i = 0
+; @i = 0
 ;----------
 push.f 0
+;----------
+; DECL i = 0
+;----------
 push.f 0
 set 0
 .beginloop_0_1
 ;----------
 ; IF (i Less 10) THEN
 ; 	PRINT i
-; 	CONTINUE
-; 	PRINT i
-; 
 ; ELSE
 ; 	BREAK
 ; 
@@ -21,17 +21,6 @@ get 0
 push.f 10
 cmplt.f
 jumpf else_0_1
-;----------
-; PRINT i
-;----------
-get 0
-out.f
-push.i 10
-out.c
-;----------
-; CONTINUE
-;----------
-jump iterloop_0_1
 ;----------
 ; PRINT i
 ;----------
