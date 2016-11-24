@@ -1,49 +1,54 @@
 .start
 ;----------
-; var i = 0
+; DECL i = 0
 ;----------
 push.f 0
 push.f 0
 set 0
-;--------
-; loop
-;--------
 .beginloop_0_1
 ;----------
-; if (i Less 10)
+; IF (i Less 10) THEN
+; 	PRINT i
+; 	CONTINUE
+; 	PRINT i
+; 
+; ELSE
+; 	BREAK
+; 
+; 
 ;----------
 get 0
 push.f 10
 cmplt.f
 jumpf else_0_1
-;--------
-; print(i)
-;--------
+;----------
+; PRINT i
+;----------
 get 0
 out.f
 push.i 10
 out.c
-;--------
-; continue
-;--------
+;----------
+; CONTINUE
+;----------
 jump iterloop_0_1
-;--------
-; print(i)
-;--------
+;----------
+; PRINT i
+;----------
 get 0
 out.f
 push.i 10
 out.c
 jump endif_0_1
 .else_0_1
-;--------
-; break
-;--------
+;----------
+; BREAK
+;----------
 jump endloop_0_1
 .endif_0_1
 .iterloop_0_1
 ;----------
-; i = (i Add 1)
+; ASSIGN i = (i Add 1)
 ;----------
 get 0
 push.f 1

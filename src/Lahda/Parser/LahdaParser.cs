@@ -26,7 +26,7 @@ namespace Lahda.Parser
         {
             if (!IsValue(TokenType.SpecialCharacter, Lexer.Configuration.EndOfStatement()))
             {
-                throw new InvalidOperationException($"end of statement {PeekToken()}");
+                throw new InvalidOperationException($"end of statement: expected={Lexer.Configuration.EndOfStatement()}, found={PeekToken()}");
             }
         }
 
@@ -49,7 +49,7 @@ namespace Lahda.Parser
                         return Statement(AssignationExpression);
                 }
             }
-            throw new InvalidOperationException($"next statement {PeekToken()}");
+            throw new InvalidOperationException($"next statement expected: found={PeekToken()}");
         }
 
         public AbstractStatementNode DetermineKeywordExpression()
@@ -91,7 +91,7 @@ namespace Lahda.Parser
             }
             forever; 
         */
-        public AbstractStatementNode DoExpression()
+        public LoopNode DoExpression()
         {
             var statement = NextStatement();
             switch (GetKeywordType())
@@ -103,24 +103,24 @@ namespace Lahda.Parser
             throw new InvalidOperationException("invalid do expression");
         }
 
-        public AbstractStatementNode DoWhileExpression(AbstractStatementNode statement)
+        public LoopNode DoWhileExpression(AbstractStatementNode statement)
         {
             var stopCondition = ParentheseEnclosed(ArithmeticExpression);
             return new LoopNode(stopCondition, statement);
         }
 
-        public AbstractStatementNode DoUntilExpression(AbstractStatementNode statement)
+        public LoopNode DoUntilExpression(AbstractStatementNode statement)
         {
             var stopCondition = ParentheseEnclosed(ArithmeticExpression);
             return new LoopNode(stopCondition, statement, true);
         }
 
-        public AbstractStatementNode DoForeverExpression(AbstractStatementNode statement)
+        public LoopNode DoForeverExpression(AbstractStatementNode statement)
         {
             return new LoopNode(new LiteralNode(1), statement);
         }
 
-        public AbstractStatementNode WhileExpression()
+        public LoopNode WhileExpression()
         {
             var stopCondition = ParentheseEnclosed(ArithmeticExpression);
             var stmt = NextStatement();
@@ -142,18 +142,19 @@ namespace Lahda.Parser
                 x = x + 2;
             }
         */
-        public AbstractStatementNode ForExpression()
+        public BlockNode ForExpression()
         {
-            Symbols.PushScope();
-            var data = ParentheseEnclosed(() => new ForExpressionData()
+            return Scoped(() =>
             {
-                Initialization = Statement(DeclarationExpression),
-                StopCondition = Statement(ArithmeticExpression),
-                Iteration = AssignationExpression()
+                var data = ParentheseEnclosed(() => new ForExpressionData()
+                {
+                    Initialization = Statement(DeclarationExpression),
+                    StopCondition = Statement(ArithmeticExpression),
+                    Iteration = AssignationExpression()
+                });
+                var stmt = NextStatement();
+                return new BlockNode(data.Initialization, new LoopNode(data.StopCondition, data.Iteration, stmt));
             });
-            var stmt = NextStatement();
-            Symbols.PopScope();
-            return new BlockNode(data.Initialization, new LoopNode(data.StopCondition, data.Iteration, stmt));
         }
 
         /*
@@ -194,8 +195,7 @@ namespace Lahda.Parser
         */
         public BlockNode StatementsBlock()
         {
-            Symbols.PushScope();
-            var stmts = BraceEnclosed(() =>
+            var stmts = Scoped(() => BraceEnclosed(() =>
             {
                 var statements = new List<AbstractStatementNode>();
                 // Why don't we use IsOperator here ? Because we don't want to consume it, the 'BraceEnclosed' function will do it for us
@@ -207,9 +207,19 @@ namespace Lahda.Parser
                     statements.Add(NextStatement());
                 }
                 return statements;
-            });
-            Symbols.PopScope();
+            }));
             return new BlockNode(stmts);
+        }
+
+        /*
+            Execute the given function in a new scope.
+        */
+        public T Scoped<T>(Func<T> fun)
+        {
+            Symbols.PushScope();
+            T value = fun();
+            Symbols.PopScope();
+            return value;
         }
 
         /*
@@ -470,6 +480,7 @@ namespace Lahda.Parser
                             // here is the recursive call of our arithmetic function
                             return ParentheseEnclosed(ArithmeticExpression);
 
+                        // inverse the expression
                         case OperatorType.Sub:
                             NextToken();
                             return new OperationNode(OperatorType.Sub, new LiteralNode(0), ArithmeticPrimitive());

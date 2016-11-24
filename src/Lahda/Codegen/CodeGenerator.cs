@@ -31,6 +31,12 @@ namespace Lahda.Codegen
         }
 
         public void Write(string line) => Output.Write(line);
+        public void Debug(string message)
+        {
+            Write(";----------");
+            Write($"; {message.Replace("\n", "\n; ")}");
+            Write(";----------");
+        }
         private void Optimize() => RootNode.OptimizeChilds();
         private void PushLabel(ScopeType type) => Labels[type].Push(0);
         private void IncrementLabel(ScopeType type) => Labels[type].Increment();
@@ -38,6 +44,16 @@ namespace Lahda.Codegen
 
         private void Generate(AbstractNode node)
         {
+            var debugNodeTypesIgnore = new[]
+            {
+                NodeType.Block,
+                NodeType.Literal,
+                NodeType.Identifier,
+                NodeType.Loop,
+                NodeType.Operation,
+            };
+            if (!debugNodeTypesIgnore.Contains(node.Type))
+                Debug(node.ToString());
             switch (node.Type)
             {
                 case NodeType.Block:
@@ -123,9 +139,6 @@ namespace Lahda.Codegen
 
                 case NodeType.Declaration:
                     var decl = (DeclarationNode)node;
-                    Write(";----------");
-                    Write($"; var {decl.Identifier.Symbol.Name} = {decl.Expression}");
-                    Write(";----------");
                     Write("push.f 0");
                     Generate(decl.Expression);
                     Write($"set {decl.Identifier.Symbol.Pointer}");
@@ -133,9 +146,6 @@ namespace Lahda.Codegen
 
                 case NodeType.Assignation:
                     var assign = (AssignationNode)node;
-                    Write(";----------");
-                    Write($"; {assign.Identifier.Symbol.Name} = {assign.Expression}");
-                    Write(";----------");
                     Generate(assign.Expression);
                     Write($"set {assign.Identifier.Symbol.Pointer}");
                     break;
@@ -152,9 +162,6 @@ namespace Lahda.Codegen
 
                 case NodeType.Print:
                     var print = (PrintNode)node;
-                    Write(";--------");
-                    Write($"; print({print.Expression})");
-                    Write(";--------");
                     Generate(print.Expression);
                     Write("out.f");
 
@@ -165,50 +172,42 @@ namespace Lahda.Codegen
 
                 case NodeType.Loop:
                     var loop = (LoopNode)node;
-                    Write(";--------");
-                    Write("; loop");
-                    Write(";--------");
                     IncrementLabel(ScopeType.Loop);
                     PushLabel(ScopeType.Loop);
                     var loopId = CurrentLabel(ScopeType.Loop);
-                    Write(DeclareLabel(BeginLoop(loopId)));
-                    Generate(loop.Conditional);
-                    Write(DeclareLabel(IterationLoop(loopId)));
-                    Generate(loop.Iteration);
-                    Write(Jump(BeginLoop(loopId)));
-                    Write(DeclareLabel(EndLoop(loopId)));
+                    {
+                        Write(DeclareLabel(BeginLoop(loopId)));
+                        Generate(loop.Conditional);
+                        Write(DeclareLabel(IterationLoop(loopId)));
+                        Generate(loop.Iteration);
+                        Write(Jump(BeginLoop(loopId)));
+                        Write(DeclareLabel(EndLoop(loopId)));
+                    }
                     PopLabel(ScopeType.Loop);
                     break;
 
                 case NodeType.Break:
-                    Write(";--------");
-                    Write($"; break");
-                    Write(";--------");
                     Write(Jump(EndLoop(CurrentLabel(ScopeType.Loop))));
                     break;
 
                 case NodeType.Continue:
-                    Write(";--------");
-                    Write($"; continue");
-                    Write(";--------");
                     Write(Jump(IterationLoop(CurrentLabel(ScopeType.Loop))));
                     break;
 
                 case NodeType.Conditional:
                     var cond = (ConditionalNode)node;
-                    Write(";----------");
-                    Write($"; if {cond.Expression}");
-                    Write(";----------");
                     IncrementLabel(ScopeType.Conditional);
                     PushLabel(ScopeType.Conditional);
                     var condId = CurrentLabel(ScopeType.Conditional);
-                    Generate(cond.Expression);
-                    Write(JumpFalse(Else(condId)));
-                    Generate(cond.TrueStatement);
-                    Write(Jump(EndIf(condId)));
-                    Write(DeclareLabel(Else(condId)));
-                    Generate(cond.FalseStatement);
-                    Write(DeclareLabel(EndIf(condId)));
+                    {
+                        Generate(cond.Expression);
+                        Write(JumpFalse(Else(condId)));
+                        Generate(cond.TrueStatement);
+                        Write(Jump(EndIf(condId)));
+                        Write(DeclareLabel(Else(condId)));
+                        Generate(cond.FalseStatement);
+                        Write(DeclareLabel(EndIf(condId)));
+                    }
                     PopLabel(ScopeType.Conditional);
                     break;
             }
