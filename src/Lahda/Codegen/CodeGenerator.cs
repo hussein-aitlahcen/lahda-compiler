@@ -59,8 +59,8 @@ namespace Lahda.Codegen
 
                 case NodeType.Operation:
                     var operation = (OperationNode)node;
-                    PreGenerate(operation.Left);
-                    PreGenerate(operation.Right);
+                    PreGenerate(operation.LeftOperand);
+                    PreGenerate(operation.RightOperand);
                     break;
 
                 case NodeType.Declaration:
@@ -124,11 +124,11 @@ namespace Lahda.Codegen
                     */
                     var requireInteger = integerOperations.Contains(operation.Operator);
 
-                    Generate(operation.Left);
+                    Generate(operation.LeftOperand);
                     if (requireInteger)
                         Write("ftoi");
 
-                    Generate(operation.Right);
+                    Generate(operation.RightOperand);
                     if (requireInteger)
                         Write("ftoi");
 

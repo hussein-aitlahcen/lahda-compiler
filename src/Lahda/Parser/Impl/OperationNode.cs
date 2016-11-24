@@ -4,24 +4,24 @@ namespace Lahda.Parser.Impl
 {
     public sealed class OperationNode : AbstractExpressionNode
     {
-        public AbstractExpressionNode Left { get; private set; }
-        public AbstractExpressionNode Right { get; private set; }
+        public AbstractExpressionNode LeftOperand { get; private set; }
+        public AbstractExpressionNode RightOperand { get; private set; }
         public OperatorType Operator { get; set; }
 
         public OperationNode(OperatorType op, AbstractExpressionNode left, AbstractExpressionNode right)
             : base(NodeType.Operation)
         {
             Operator = op;
-            Left = left;
-            Right = right;
+            LeftOperand = left;
+            RightOperand = right;
         }
 
         public override AbstractExpressionNode Optimize()
         {
-            Left = Left.Optimize();
-            Right = Right.Optimize();
-            var leftLit = Left as LiteralNode;
-            var rightLit = Right as LiteralNode;
+            LeftOperand = LeftOperand.Optimize();
+            RightOperand = RightOperand.Optimize();
+            var leftLit = LeftOperand as LiteralNode;
+            var rightLit = RightOperand as LiteralNode;
             if (leftLit != null && rightLit != null)
             {
                 switch (Operator)
@@ -47,6 +47,6 @@ namespace Lahda.Parser.Impl
             return this;
         }
 
-        public override string ToString() => $"({Left} {Operator} {Right})";
+        public override string ToString() => $"({LeftOperand} {Operator} {RightOperand})";
     }
 }
