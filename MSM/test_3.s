@@ -15,12 +15,14 @@ set 1
 ; 		ASSIGN x = 1
 ; 	ELSE
 ; 
+; 	ENDIF
 ; 
 ; 	ASSIGN i = (i Add 1)
 ; 
 ; ELSE
 ; 	BREAK
 ; 
+; ENDIF
 ; 
 get 1
 push.f 0
@@ -30,6 +32,7 @@ jumpf else_0_1
 ; 	ASSIGN x = 1
 ; ELSE
 ; 
+; ENDIF
 ; 
 get 0
 push.f 5

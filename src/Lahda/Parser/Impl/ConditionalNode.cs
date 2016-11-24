@@ -26,6 +26,9 @@ namespace Lahda.Parser.Impl
                 sb.Append("\t");
             sb.AppendLine("ELSE");
             sb.AppendLine(FalseStatement.ToString(indent + 1));
+            for (int i = 0; i < indent; i++)
+                sb.Append("\t");
+            sb.AppendLine("ENDIF");
             return sb.ToString();
         }
 

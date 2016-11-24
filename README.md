@@ -56,68 +56,84 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 
 ### Example
 
-Compute factorial(5)
 ```javascript
-var x = 1; 
-var s = 1; 
-while(s < 5) 
+var i = 0;
+var x = false; 
+do 
 { 
-    s = s + 1; 
-    x = x * s; 
-} 
-print x;
+  if(i > 5) 
+    x = true; 
+  i++; 
+} until(x); 
+print i; // show 7
 ```
 
-Generated code
+#### Generated code
 
 ```assembly
-----------
- var x = 1
-----------
+.start
+; @i = 0
 push.f 0
-push.f 1
+; @x = 1
+push.f 0
+; DECL i = 0
+push.f 0
 set 0
-----------
- var s = 1
-----------
+; DECL x = 0
 push.f 0
+set 1
+.beginloop_0_1
+; IF (x Equals 0) THEN
+; 	IF (i Greater 5) THEN
+; 		ASSIGN x = 1
+; 	ELSE
+; 
+; 	ENDIF
+; 
+; 	ASSIGN i = (i Add 1)
+; 
+; ELSE
+; 	BREAK
+; 
+; ENDIF
+; 
+get 1
+push.f 0
+cmpeq.f
+jumpf else_0_1
+; IF (i Greater 5) THEN
+; 	ASSIGN x = 1
+; ELSE
+; 
+; ENDIF
+; 
+get 0
+push.f 5
+cmpgt.f
+jumpf else_0_1_1
+; ASSIGN x = 1
 push.f 1
 set 1
---------
- loop
---------
-.beginloop_0_1
-----------
- if (s < 5)
-----------
-get 1
-push.f 5
-cmplt.f
-jumpf else_0_1
-----------
- s = (s + 1)
-----------
-get 1
+jump endif_0_1_1
+.else_0_1_1
+.endif_0_1_1
+; ASSIGN i = (i Add 1)
+get 0
 push.f 1
 add.f
-set 1
-----------
- x = (x * s)
-----------
-get 0
-get 1
-mul.f
 set 0
 jump endif_0_1
 .else_0_1
+; BREAK
 jump endloop_0_1
 .endif_0_1
+.iterloop_0_1
 jump beginloop_0_1
 .endloop_0_1
---------
- print(x)
---------
+; PRINT i
 get 0
 out.f
+push.i 10
+out.c
 halt
 ```
