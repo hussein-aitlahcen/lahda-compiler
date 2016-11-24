@@ -35,9 +35,7 @@ namespace Lahda.Codegen
         public void Write(string line) => Output.Write(line);
         public void Debug(string message)
         {
-            Write(";----------");
             Write($"; {message.Replace("\n", "\n; ")}");
-            Write(";----------");
         }
         private void Optimize() => RootNode.OptimizeChilds();
         private void PushLabel(ScopeType type) => Labels[type].Push(0);

@@ -39,12 +39,12 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 ### Statements
 
 * **Identifier** = `([A-Za-z][A-Za-z0-9_]*)`
-* **AssignOperator** = *`+=`* | *`-=`* | *`/=`* | *`%=`* | *`^=`* | *`=`* | `*=`
-* **Assignation** = Identifier AssignOperator Expression
-* **Incrementation** = Identifier (`++` | `--`)
+* **BinaryOperator** = *`+=`* | *`-=`* | *`/=`* | *`%=`* | *`^=`* | *`=`* | `*=`
+* **UnaryOperator** = *`++`* | *`--`*
+* **Assignation** = Identifier (BinaryOperator Expression | UnaryOperator)
 * **Declaration** = *`var`* Identifier *`=`* Expression
 * **LoopControl** = `continue` | `break`
-* **Inline** = (Assignation | Incrementation | Declaration | LoopControl) StatementEnd
+* **Inline** = (Assignation | Declaration | LoopControl) StatementEnd
 * **Block** = *`{`* Statement\* *`}`*
 * **Conditional** = *`if`* *`(`* Expression *`)`* Statement (*`else`* Statement)?
 * **Loop** =
