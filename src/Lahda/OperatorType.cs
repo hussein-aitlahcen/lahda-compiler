@@ -30,5 +30,7 @@ namespace Lahda
         MulAssign,
         DivAssign,
         ModAssign,
+        Increment,
+        Decrement,
     }
 }

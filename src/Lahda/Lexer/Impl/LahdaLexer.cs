@@ -22,6 +22,8 @@ namespace Lahda.Lexer.Impl
             configuration.AddKeyword(KeywordType.String, "string");
             configuration.AddKeyword(KeywordType.Print, "print");
 
+            configuration.AddOperator(OperatorType.Increment, "++");
+            configuration.AddOperator(OperatorType.Decrement, "--");
             configuration.AddOperator(OperatorType.Negate, "!");
             configuration.AddOperator(OperatorType.Add, "+");
             configuration.AddOperator(OperatorType.Sub, "-");

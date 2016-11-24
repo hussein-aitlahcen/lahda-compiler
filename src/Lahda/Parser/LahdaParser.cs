@@ -295,7 +295,9 @@ namespace Lahda.Parser
                 OperatorType.SubAssign,
                 OperatorType.MulAssign,
                 OperatorType.DivAssign,
-                OperatorType.ModAssign
+                OperatorType.ModAssign,
+                OperatorType.Increment,
+                OperatorType.Decrement,
             };
 
             var op = assignationOperators.FirstOrDefault(IsOperator);
@@ -331,6 +333,14 @@ namespace Lahda.Parser
 
                 case OperatorType.ModAssign:
                     expression = new OperationNode(OperatorType.Mod, new IdentifierNode(symbol), ArithmeticExpression());
+                    break;
+
+                case OperatorType.Increment:
+                    expression = new OperationNode(OperatorType.Add, new IdentifierNode(symbol), new LiteralNode(1));
+                    break;
+
+                case OperatorType.Decrement:
+                    expression = new OperationNode(OperatorType.Sub, new IdentifierNode(symbol), new LiteralNode(1));
                     break;
             }
 

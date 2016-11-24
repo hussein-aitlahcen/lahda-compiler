@@ -181,10 +181,16 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Break:
+                    Write(";--------");
+                    Write($"; break");
+                    Write(";--------");
                     Write(Jump(EndLoop(CurrentLabel(ScopeType.Loop))));
                     break;
 
                 case NodeType.Continue:
+                    Write(";--------");
+                    Write($"; continue");
+                    Write(";--------");
                     Write(Jump(IterationLoop(CurrentLabel(ScopeType.Loop))));
                     break;
 

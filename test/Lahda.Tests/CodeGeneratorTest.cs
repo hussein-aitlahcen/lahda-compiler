@@ -11,7 +11,7 @@ namespace Lahda.Tests
     {
         [Theory]
         [InlineData("for(var i = 0; i < -(-(-(-10))); i += 1) print i;", 1)]
-        [InlineData("{ for(var i = 0; i < 10; i+=1) { print i; continue; } }", 2)]
+        [InlineData("for(var i = 0; i < 10; i++) { print i; continue; print i; }", 2)]
         public void CodeGenerator_should_generate_godlike_code(string content, int i)
         {
             var codeSource = CodeSource.FromMemory(content);

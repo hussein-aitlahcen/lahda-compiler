@@ -23,9 +23,22 @@ get 0
 out.f
 push.i 10
 out.c
+;--------
+; continue
+;--------
 jump iterloop_0_1
+;--------
+; print(i)
+;--------
+get 0
+out.f
+push.i 10
+out.c
 jump endif_0_1
 .else_0_1
+;--------
+; break
+;--------
 jump endloop_0_1
 .endif_0_1
 .iterloop_0_1
