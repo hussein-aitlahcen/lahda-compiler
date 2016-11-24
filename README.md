@@ -41,9 +41,10 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 * **Identifier** = `([A-Za-z][A-Za-z0-9_]*)`
 * **AssignOperator** = *`+=`* | *`-=`* | *`/=`* | *`%=`* | *`^=`* | *`=`* | `*=`
 * **Assignation** = Identifier AssignOperator Expression
+* **Incrementation** = Identifier (`++` | `--`)
 * **Declaration** = *`var`* Identifier *`=`* Expression
 * **LoopControl** = `continue` | `break`
-* **Inline** = (Assignation | Declaration | LoopControl) StatementEnd
+* **Inline** = (Assignation | Incrementation | Declaration | LoopControl) StatementEnd
 * **Block** = *`{`* Statement\* *`}`*
 * **Conditional** = *`if`* *`(`* Expression *`)`* Statement (*`else`* Statement)?
 * **Loop** =
