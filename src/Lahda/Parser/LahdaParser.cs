@@ -112,7 +112,8 @@ namespace Lahda.Parser
         public LoopNode DoUntilExpression(AbstractStatementNode statement)
         {
             var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-            return new LoopNode(stopCondition, statement, true);
+            var reversed = new OperationNode(OperatorType.Equals, stopCondition, new LiteralNode(0));
+            return new LoopNode(reversed, statement);
         }
 
         public LoopNode DoForeverExpression(AbstractStatementNode statement)

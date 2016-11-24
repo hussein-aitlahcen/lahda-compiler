@@ -8,16 +8,14 @@ namespace Lahda.Parser.Impl
         public AbstractStatementNode Iteration { get; }
 
 
-        public LoopNode(AbstractExpressionNode condition, AbstractStatementNode iteration, AbstractStatementNode statement, bool reverse = false)
+        public LoopNode(AbstractExpressionNode condition, AbstractStatementNode iteration, AbstractStatementNode statement)
         {
-            if (reverse)
-                condition = new OperationNode(OperatorType.Equals, condition, new LiteralNode(0));
             Conditional = new ConditionalNode(condition, statement, new BlockNode(new BreakNode()));
             Iteration = iteration;
         }
 
-        public LoopNode(AbstractExpressionNode condition, AbstractStatementNode statement, bool reverse = false)
-            : this(condition, new BlockNode(), statement, reverse)
+        public LoopNode(AbstractExpressionNode condition, AbstractStatementNode statement)
+            : this(condition, new BlockNode(), statement)
         {
         }
 
