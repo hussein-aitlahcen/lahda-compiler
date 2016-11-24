@@ -17,6 +17,7 @@ namespace Lahda.Tests
         [InlineData("3*(2+5)/2.e+8")]
         [InlineData("3*(2+5)%2.e+8")]
         [InlineData("3*((2+5)/2.e+8)/.5")]
+        [InlineData("3*2%5/5")]
         public void Parser_should_parse_expression(string content)
         {
             GetParser(content).ArithmeticExpression();

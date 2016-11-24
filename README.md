@@ -38,6 +38,7 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 
 ### Statements
 
+* **StatementEnd** = *`;`*
 * **Identifier** = `([A-Za-z][A-Za-z0-9_]*)`
 * **BinaryOperator** = *`+=`* | *`-=`* | *`/=`* | *`%=`* | *`^=`* | *`=`* | `*=`
 * **UnaryOperator** = *`++`* | *`--`*
@@ -47,13 +48,10 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 * **Inline** = (Assignation | Declaration | LoopControl) StatementEnd
 * **Block** = *`{`* Statement\* *`}`*
 * **Conditional** = *`if`* *`(`* Expression *`)`* Statement (*`else`* Statement)?
-* **Loop** =
-  * *`while`* *`(`* Expression *`)`* Statement |
-  * *`for`* *`(`* Declaration ; Expression ; Assignation *`)`* Statement |
-  * *`do`* Statement *`while`* *`(`* Expression *`)`* StatementEnd |
-  * *`do`* Statement *`until`* *`(`* Expression *`)`* StatementEnd |
-  * *`do`* Statement *`forever`* StatementEnd
-* **StatementEnd** = *`;`*
+* **WhileLoop** = *`while`* *`(`* Expression *`)`* Statement
+* **DoLoop** = *`do`* Statement ((*`while`* | *`until`*) *`(`* Expression *`)`*  | *`forever`* ) StatementEnd
+* **ForLoop** = *`for`* *`(`* Declaration ; Expression ; Assignation *`)`* Statement
+* **Loop** = WhileLoop | DoLoop | ForLoop
 * **Statement** = Inline | Loop | Block | StatementEnd
 
 ### Example
