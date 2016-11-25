@@ -62,7 +62,7 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 * **Conditional** = *`if`* *`(`* Expression *`)`* Statement (*`else`* Statement)?
 * **WhileLoop** = *`while`* *`(`* Expression *`)`* Statement
 * **DoLoop** = *`do`* Statement ((*`while`* | *`until`*) *`(`* Expression *`)`*  | *`forever`* ) StatementEnd
-* **ForLoop** = *`for`* *`(`* Declaration ; Expression ; Assignation *`)`* Statement
+* **ForLoop** = *`for`* *`(`* Declaration StatemendEnd Expression StatemendEnd Assignation *`)`* Statement
 * **Loop** = WhileLoop | DoLoop | ForLoop
 * **Statement** = Inline | Loop | Block | StatementEnd
 
