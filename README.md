@@ -12,6 +12,18 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 
 ## Introduction
 
+### Getting started
+
+* Generate the MSM (mini stack machine) : 
+  * `cd MSM/`
+  * `make`
+
+* Restore nugets packages :
+  * `dotnet restore`
+
+* Build the project :
+  * `dotnet build`
+
 ### Supported types
 
 * Floating
