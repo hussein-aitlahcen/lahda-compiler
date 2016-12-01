@@ -62,8 +62,8 @@ namespace Lahda.Parser
                 case KeywordType.For: return ForExpression();
                 case KeywordType.Do: return Statement(DoExpression);
                 case KeywordType.If: return ConditionalExpression();
-                case KeywordType.Break: return Statement(() => new BreakNode());
-                case KeywordType.Continue: return Statement(() => new ContinueNode());
+                case KeywordType.Break: return Statement<BreakNode>();
+                case KeywordType.Continue: return Statement<ContinueNode>();
             }
             throw new InvalidOperationException($"keyword expected");
         }
@@ -112,13 +112,12 @@ namespace Lahda.Parser
         public LoopNode DoUntilExpression(AbstractStatementNode statement)
         {
             var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-            var reversed = new OperationNode(OperatorType.Equals, stopCondition, new LiteralNode(0));
-            return new LoopNode(reversed, statement);
+            return new LoopNode(OperationNode.Negate(stopCondition), statement);
         }
 
         public LoopNode DoForeverExpression(AbstractStatementNode statement)
         {
-            return new LoopNode(new LiteralNode(1), statement);
+            return new LoopNode(LiteralNode.True, statement);
         }
 
         public LoopNode WhileExpression()
@@ -257,6 +256,8 @@ namespace Lahda.Parser
             return expression;
         }
 
+        public T Statement<T>() where T : new() => Statement<T>(() => new T());
+
         public PrintNode PrintExpression() => new PrintNode(ArithmeticExpression());
 
         /*
@@ -343,11 +344,11 @@ namespace Lahda.Parser
                     break;
 
                 case OperatorType.Increment:
-                    expression = new OperationNode(OperatorType.Add, new IdentifierNode(symbol), new LiteralNode(1));
+                    expression = OperationNode.Increment(new IdentifierNode(symbol));
                     break;
 
                 case OperatorType.Decrement:
-                    expression = new OperationNode(OperatorType.Sub, new IdentifierNode(symbol), new LiteralNode(1));
+                    expression = OperationNode.Decrement(new IdentifierNode(symbol));
                     break;
             }
 
@@ -437,7 +438,7 @@ namespace Lahda.Parser
                 - boolean (true/false)
                 - number (floating)
                 - identifier (variable reference)
-                - arithmetic expression (enclosed in parentheses)
+                - primitive (yes, again, but opposed/negated or enclosed in parentheses)
         */
         private AbstractExpressionNode ArithmeticPrimitive()
         {
@@ -448,11 +449,11 @@ namespace Lahda.Parser
                     // boolean expressions are transformed into arithmetics ones
                     if (IsKeyword(KeywordType.True))
                     {
-                        return new LiteralNode(1);
+                        return LiteralNode.True;
                     }
                     else if (IsKeyword(KeywordType.False))
                     {
-                        return new LiteralNode(0);
+                        return LiteralNode.False;
                     }
                     break;
 
@@ -477,15 +478,15 @@ namespace Lahda.Parser
                             // here is the recursive call of our arithmetic function
                             return ParentheseEnclosed(ArithmeticExpression);
 
-                        // inverse the expression
+                        // oppose the expression
                         case OperatorType.Sub:
                             NextToken();
-                            return new OperationNode(OperatorType.Sub, new LiteralNode(0), ArithmeticPrimitive());
+                            return OperationNode.Oppose(ArithmeticPrimitive());
 
                         // negate the expression
                         case OperatorType.Negate:
                             NextToken();
-                            return new OperationNode(OperatorType.Equals, new LiteralNode(0), ArithmeticPrimitive());
+                            return OperationNode.Negate(ArithmeticPrimitive());
 
                     }
                     break;
