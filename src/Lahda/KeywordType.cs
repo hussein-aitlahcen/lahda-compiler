@@ -13,12 +13,12 @@ namespace Lahda
         Break,
         Reset,
         Continue,
-        Poor,
         Var,
         Print,
         Float,
         String,
         True,
-        False
+        False,
+        Return
     }
 }

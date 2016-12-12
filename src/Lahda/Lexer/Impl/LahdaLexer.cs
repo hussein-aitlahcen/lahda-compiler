@@ -15,13 +15,14 @@ namespace Lahda.Lexer.Impl
             configuration.AddKeyword(KeywordType.Forever, "forever");
             configuration.AddKeyword(KeywordType.Reset, "reset");
             configuration.AddKeyword(KeywordType.Var, "var");
-            configuration.AddKeyword(KeywordType.Poor, "poor");
             configuration.AddKeyword(KeywordType.Until, "until");
             configuration.AddKeyword(KeywordType.False, "false");
             configuration.AddKeyword(KeywordType.True, "true");
             configuration.AddKeyword(KeywordType.String, "string");
             configuration.AddKeyword(KeywordType.Print, "print");
+            configuration.AddKeyword(KeywordType.Return, "say");
 
+            configuration.AddOperator(OperatorType.Comma, ",");
             configuration.AddOperator(OperatorType.Increment, "++");
             configuration.AddOperator(OperatorType.Decrement, "--");
             configuration.AddOperator(OperatorType.Negate, "!");
@@ -51,6 +52,8 @@ namespace Lahda.Lexer.Impl
             configuration.AddOperator(OperatorType.Less, "<");
             configuration.AddOperator(OperatorType.NotLess, ">=");
             configuration.AddOperator(OperatorType.Pow, "^");
+            configuration.AddOperator(OperatorType.BracketOpen, "[");
+            configuration.AddOperator(OperatorType.BracketClose, "]");
         }
     }
 }

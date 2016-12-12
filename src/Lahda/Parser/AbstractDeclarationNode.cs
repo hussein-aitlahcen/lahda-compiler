@@ -1,11 +1,15 @@
-namespace Lahda.Parser.Impl
+using Lahda.Common;
+
+namespace Lahda.Parser
 {
-    public sealed class DeclarationNode : AbstractStatementNode
+    public abstract class AbstractDeclarationNode<T, K> : AbstractStatementNode
+        where K : AbstractSymbol
+        where T : AbstractIdentifierNode<K>
     {
-        public IdentifierNode Identifier { get; private set; }
+        public T Identifier { get; private set; }
         public AbstractExpressionNode Expression { get; private set; }
 
-        public DeclarationNode(IdentifierNode identifier, AbstractExpressionNode expression) : base(NodeType.Declaration)
+        public AbstractDeclarationNode(T identifier, AbstractExpressionNode expression) : base(NodeType.Declaration)
         {
             Identifier = identifier;
             Expression = expression;

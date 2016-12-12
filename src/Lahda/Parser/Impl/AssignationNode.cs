@@ -2,11 +2,11 @@ namespace Lahda.Parser.Impl
 {
     public sealed class AssignationNode : AbstractStatementNode
     {
-        public IdentifierNode Identifier { get; private set; }
+        public PrimitiveIdentifierNode Identifier { get; private set; }
 
         public AbstractExpressionNode Expression { get; private set; }
 
-        public AssignationNode(IdentifierNode identifier, AbstractExpressionNode expression) : base(NodeType.Assignation)
+        public AssignationNode(PrimitiveIdentifierNode identifier, AbstractExpressionNode expression) : base(NodeType.Assignation)
         {
             Identifier = identifier;
             Expression = expression;

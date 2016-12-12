@@ -27,7 +27,6 @@ namespace Lahda.Codegen
 
         public void Build()
         {
-            Write(".start");
             InitGenerate(RootNode);
             Write("halt");
         }
@@ -45,7 +44,6 @@ namespace Lahda.Codegen
         private void InitGenerate(AbstractNode node)
         {
             PointerIndex = -1;
-            PreGenerate(node);
             Generate(node);
         }
 
@@ -64,12 +62,26 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Declaration:
-                    var decl = (DeclarationNode)node;
-                    Debug($"@{decl.Identifier.Symbol.Name} = {decl.Identifier.Symbol.Pointer}");
-                    if (decl.Identifier.Symbol.Pointer > PointerIndex)
+                    if (node is PrimitiveDeclarationNode)
                     {
-                        PointerIndex++;
-                        Write($"push.f 0");
+                        var primDecl = (PrimitiveDeclarationNode)node;
+                        if (primDecl.Identifier.Symbol.Pointer > PointerIndex)
+                        {
+                            PointerIndex++;
+                            Write(Push());
+                        }
+                    }
+                    else if (node is ArrayDeclarationNode)
+                    {
+                        var arrDecl = (ArrayDeclarationNode)node;
+                        if (arrDecl.Identifier.Symbol.Pointer > PointerIndex)
+                        {
+                            for (var i = 0; i < arrDecl.Identifier.Symbol.Size; i++)
+                            {
+                                PointerIndex++;
+                                Write(Push());
+                            }
+                        }
                     }
                     break;
 
@@ -184,9 +196,18 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Declaration:
-                    var decl = (DeclarationNode)node;
-                    Generate(decl.Expression);
-                    Write($"set {decl.Identifier.Symbol.Pointer}");
+                    if (node is PrimitiveDeclarationNode)
+                    {
+                        var primDecl = (PrimitiveDeclarationNode)node;
+                        Generate(primDecl.Expression);
+                        Write(Set(primDecl.Identifier.Symbol.Pointer));
+                    }
+                    else if (node is ArrayDeclarationNode)
+                    {
+                        var arrDecl = (ArrayDeclarationNode)node;
+                        Generate(arrDecl.Expression);
+                        Write(Set(arrDecl.Identifier.Symbol.Pointer));
+                    }
                     break;
 
                 case NodeType.Assignation:
@@ -201,8 +222,14 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Identifier:
-                    var ident = (IdentifierNode)node;
-                    Write($"get {ident.Symbol.Pointer}");
+                    if (node is PrimitiveIdentifierNode)
+                    {
+                        Write(Get(((PrimitiveIdentifierNode)node).Symbol.Pointer));
+                    }
+                    else if (node is ArrayIdentifierNode)
+                    {
+                        // TODO: push address
+                    }
                     break;
 
                 case NodeType.Print:
@@ -255,10 +282,50 @@ namespace Lahda.Codegen
                     }
                     PopLabel(ScopeType.Conditional);
                     break;
+
+                case NodeType.Function:
+                    var fun = (FunctionNode)node;
+                    Write(DeclareLabel(fun.Identifier.Symbol.Name));
+                    // tree traversal 
+                    for (var i = 0; i < fun.Arguments.Count; i++)
+                        Write(Push());
+                    PreGenerate(fun.Statement);
+                    Generate(fun.Statement);
+                    Write(Push());
+                    Write(Ret());
+                    break;
+
+                case NodeType.Return:
+                    var ret = (ReturnNode)node;
+                    Generate(ret.Expression);
+                    Write(Ret());
+                    break;
+
+                case NodeType.Call:
+                    var call = (CallNode)node;
+                    Write(Prep(call.Target.Symbol.Name));
+                    foreach (var arg in call.Parameters)
+                    {
+                        Generate(arg);
+                    }
+                    Write(Call(call.Parameters.Count));
+                    break;
+
+                case NodeType.Root:
+                    var root = (RootNode)node;
+                    foreach (var f in root.Functions)
+                        Generate(f);
+                    break;
             }
         }
 
-
+        private string Prep(string function) => $"prep {function}";
+        private string Call(int argCount) => $"call {argCount}";
+        private string Ret() => "ret";
+        private string Set(int index) => $"set {index}";
+        private string Get(int index) => $"get {index}";
+        private string Push() => Push(0);
+        private string Push(float x) => $"push.f {x}";
         private string JumpSpec(char type, string label) => $"jump{type} {label}";
         private string JumpFalse(string label) => JumpSpec('f', label);
         private string Jump(string label) => $"jump {label}";

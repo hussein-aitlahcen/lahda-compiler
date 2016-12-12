@@ -30,6 +30,16 @@ namespace Lahda.Parser
             }
         }
 
+        public AbstractStatementNode Root()
+        {
+            var funcs = new List<FunctionNode>();
+            while (PeekToken().Type != TokenType.EOF)
+            {
+                funcs.Add(FunctionExpression());
+            }
+            return new RootNode(funcs);
+        }
+
         public AbstractStatementNode NextStatement()
         {
             var token = PeekToken() as ValueToken<string>;
@@ -64,9 +74,12 @@ namespace Lahda.Parser
                 case KeywordType.If: return ConditionalExpression();
                 case KeywordType.Break: return Statement<BreakNode>();
                 case KeywordType.Continue: return Statement<ContinueNode>();
+                case KeywordType.Return: return Statement(ReturnExpression);
             }
             throw new InvalidOperationException($"keyword expected");
         }
+
+        public ReturnNode ReturnExpression() => new ReturnNode(ArithmeticExpression());
 
         /*
             Read a loop expression starting with 'do'.
@@ -129,7 +142,7 @@ namespace Lahda.Parser
 
         private class ForExpressionData
         {
-            public DeclarationNode Initialization { get; set; }
+            public AbstractStatementNode Initialization { get; set; }
             public AbstractExpressionNode StopCondition { get; set; }
             public AssignationNode Iteration { get; set; }
         }
@@ -206,66 +219,66 @@ namespace Lahda.Parser
                 return new BlockNode(statements);
             }));
 
-
-        /*
-            Execute the given function in a new scope.
-        */
-        public T Scoped<T>(Func<T> fun)
-        {
-            Symbols.PushScope();
-            T value = fun();
-            Symbols.PopScope();
-            return value;
-        }
-
-        /*
-            Simple overload, ensure that our function is surrounded by two parentheses.
-        */
-        public T ParentheseEnclosed<T>(Func<T> fun) => Enclosed(OperatorType.ParentheseOpen, OperatorType.ParentheseClose, fun);
-
-        /*
-            Simple overload, ensure that our function is surrounded by two braces.
-        */
-        public T BraceEnclosed<T>(Func<T> fun) => Enclosed(OperatorType.BraceOpen, OperatorType.BraceClose, fun);
-
-        /*
-            Ensure that the function will be enclosed by the openning/closing operators given :
-            e.g. : Enclosed('(', ')', ArithmeticExpression) will ensure that our arithmetic expression is surrounded by ()
-        */
-        public T Enclosed<T>(OperatorType open, OperatorType close, Func<T> fun)
-        {
-            if (!IsOperator(open))
-            {
-                throw new InvalidOperationException($"missing enclosed begin operator: expected={open}, obtained={PeekToken()}");
-            }
-            var value = fun();
-            if (!IsOperator(close))
-            {
-                throw new InvalidOperationException($"missing enclosed final operator: expected={close}, obtained={PeekToken()}");
-            }
-            return value;
-        }
-
-        /*
-            Ensure that a statement is followed by an end of statement character (';' in our case)
-        */
-        public T Statement<T>(Func<T> fun)
-        {
-            var expression = fun();
-            EnsureEndOfStatement();
-            return expression;
-        }
-
-        public T Statement<T>() where T : new() => Statement<T>(() => new T());
-
         public PrintNode PrintExpression() => new PrintNode(ArithmeticExpression());
+
+        public CallNode CallExpression(FunctionSymbol symbol)
+            => ParentheseEnclosed(() =>
+            {
+                var expressions = new List<AbstractExpressionNode>();
+                while (!IsType(TokenType.Operator))
+                {
+                    expressions.Add(ArithmeticExpression());
+                    if (IsOperator(OperatorType.Comma)) ;
+                }
+                if (expressions.Count != symbol.ParameterCount)
+                {
+                    throw new InvalidOperationException($"argument count mismatch for function {symbol.Name}");
+                }
+                return new CallNode(new FunctionIdentifierNode(symbol), expressions);
+            });
+
+        public FunctionNode FunctionExpression()
+        {
+            var returnType = GetObjectType(GetKeywordType());
+            var symb = DefineFunctionSymbol();
+            return Scoped(() =>
+            {
+                var arguments = ParentheseEnclosed(() =>
+                {
+                    var args = new List<AbstractExpressionNode>();
+                    while (IsType(TokenType.Keyword))
+                    {
+                        var argType = GetObjectType(GetKeywordType());
+                        switch (argType)
+                        {
+                            case ObjectType.Floating:
+                                args.Add(new PrimitiveIdentifierNode(DefinePrimitiveSymbol()));
+                                break;
+
+                            case ObjectType.Array:
+                                // TODO: define size ? SHOULD BE A POINTER
+                                args.Add(new ArrayIdentifierNode(DefineArraySymbol(0)));
+                                break;
+
+                            default:
+                                throw new InvalidOperationException("unknow argument type");
+                        }
+                        if (IsOperator(OperatorType.Comma)) ;
+                    }
+                    return args;
+                });
+                symb.ParameterCount = arguments.Count;
+                var stmt = NextStatement();
+                return new FunctionNode(returnType, new FunctionIdentifierNode(symb), arguments, stmt);
+            });
+        }
 
         /*
             Our declaration expressions are very basic, javascript style :
                 - var x = 2;
                 - var y = "World Hello";
         */
-        public DeclarationNode DeclarationExpression()
+        public AbstractStatementNode DeclarationExpression()
         {
             /*
                 Pretty sad but in a for loop we know that our first statement will be a declaration, so, the 'var' keyword
@@ -275,16 +288,30 @@ namespace Lahda.Parser
 
             var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"declaration identifier not found");
 
+            if (IsOperator(OperatorType.BracketOpen))
+            {
+                ArithmeticExpression();
+                // TODO: DEFINE SIZE
+                var size = 0;
+                if (!IsOperator(OperatorType.BracketClose))
+                {
+                    throw new InvalidOperationException("expected closing bracket");
+                }
+                var arrSymbol = new ArrayVariableSymbol(ident, size);
+                Symbols.DefineSymbol(arrSymbol);
+                return new ArrayDeclarationNode(new ArrayIdentifierNode(arrSymbol));
+            }
+
             if (!IsOperator(OperatorType.Assign))
                 throw new InvalidOperationException($"declaration operator missing {PeekToken()}");
 
             var expression = ArithmeticExpression();
 
             // define the new symbol
-            var symbol = new Symbol(SymbolType.Floating, ident);
+            var symbol = new PrimitiveVariableSymbol(ident);
             Symbols.DefineSymbol(symbol);
 
-            return new DeclarationNode(new IdentifierNode(symbol), expression);
+            return new PrimitiveDeclarationNode(new PrimitiveIdentifierNode(symbol), expression);
         }
 
         /*
@@ -312,7 +339,7 @@ namespace Lahda.Parser
             if (op == OperatorType.None)
                 throw new InvalidOperationException($"wrong assignation operator {PeekToken()}");
 
-            var symbol = Symbols.Search(ident);
+            var symbol = Symbols.Search<PrimitiveVariableSymbol>(ident);
             if (symbol.IsUnknow)
                 throw new InvalidOperationException($"unknow symbol {ident}");
 
@@ -324,35 +351,34 @@ namespace Lahda.Parser
                     break;
 
                 case OperatorType.AddAssign:
-                    expression = new OperationNode(OperatorType.Add, new IdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Add, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
                     break;
 
                 case OperatorType.SubAssign:
-                    expression = new OperationNode(OperatorType.Sub, new IdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Sub, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
                     break;
 
                 case OperatorType.MulAssign:
-                    expression = new OperationNode(OperatorType.Mul, new IdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Mul, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
                     break;
 
                 case OperatorType.DivAssign:
-                    expression = new OperationNode(OperatorType.Div, new IdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Div, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
                     break;
 
                 case OperatorType.ModAssign:
-                    expression = new OperationNode(OperatorType.Mod, new IdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Mod, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
                     break;
 
                 case OperatorType.Increment:
-                    expression = OperationNode.Increment(new IdentifierNode(symbol));
+                    expression = OperationNode.Increment(new PrimitiveIdentifierNode(symbol));
                     break;
 
                 case OperatorType.Decrement:
-                    expression = OperationNode.Decrement(new IdentifierNode(symbol));
+                    expression = OperationNode.Decrement(new PrimitiveIdentifierNode(symbol));
                     break;
             }
-
-            return new AssignationNode(new IdentifierNode(symbol), expression);
+            return new AssignationNode(new PrimitiveIdentifierNode(symbol), expression);
         }
 
         // The arithmetic expression starts at the higher level, the Logical Or.
@@ -463,12 +489,24 @@ namespace Lahda.Parser
 
                 case TokenType.Identifier:
                     var ident = ((ValueToken<string>)NextToken()).Value;
-                    var symbol = Symbols.Search(ident);
+                    var symbol = Symbols.Search<AbstractSymbol>(ident);
                     if (symbol.IsUnknow)
                     {
                         throw new InvalidOperationException($"unknow symbol {ident}");
                     }
-                    return new IdentifierNode(symbol);
+                    if (IsValueUnconsumed(TokenType.Operator, Lexer.Configuration.GetOperator(OperatorType.ParentheseOpen)))
+                    {
+                        if (!(symbol is FunctionSymbol))
+                        {
+                            throw new InvalidOperationException("wrong symbol type for function call in primitive");
+                        }
+                        return CallExpression((FunctionSymbol)symbol);
+                    }
+                    if (symbol.Type == ObjectType.Function)
+                    {
+                        throw new InvalidOperationException($"wrong symbol type for atomic identifier in primitive {symbol.Type}");
+                    }
+                    return new PrimitiveIdentifierNode((PrimitiveVariableSymbol)symbol);
 
                 case TokenType.Operator:
                     var op = ((ValueToken<string>)token).Value;
@@ -493,6 +531,84 @@ namespace Lahda.Parser
             }
             throw new InvalidOperationException($"arithmetic primitive unknow type {token}");
         }
+
+        public ArrayVariableSymbol DefineArraySymbol(int size)
+            => DefineSymbol<ArrayVariableSymbol>(ident => new ArrayVariableSymbol(ident, size));
+
+        public PrimitiveVariableSymbol DefinePrimitiveSymbol()
+            => DefineSymbol<PrimitiveVariableSymbol>(ident => new PrimitiveVariableSymbol(ident));
+
+        public FunctionSymbol DefineFunctionSymbol()
+            => DefineSymbol<FunctionSymbol>(ident => new FunctionSymbol(ident));
+
+        public T DefineSymbol<T>(Func<string, T> fun)
+            where T : AbstractSymbol
+        {
+            var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"identifier not found");
+            var symbol = fun(ident);
+            Symbols.DefineSymbol(symbol);
+            return symbol;
+        }
+
+        public ObjectType GetObjectType(KeywordType type)
+        {
+            switch (type)
+            {
+                case KeywordType.Float: return ObjectType.Floating;
+                default: throw new InvalidOperationException($"unknow object type={type}");
+            }
+        }
+
+        /*
+            Execute the given function in a new scope.
+        */
+        public T Scoped<T>(Func<T> fun)
+        {
+            Symbols.PushScope();
+            T value = fun();
+            Symbols.PopScope();
+            return value;
+        }
+
+        /*
+            Simple overload, ensure that our function is surrounded by two parentheses.
+        */
+        public T ParentheseEnclosed<T>(Func<T> fun) => Enclosed(OperatorType.ParentheseOpen, OperatorType.ParentheseClose, fun);
+
+        /*
+            Simple overload, ensure that our function is surrounded by two braces.
+        */
+        public T BraceEnclosed<T>(Func<T> fun) => Enclosed(OperatorType.BraceOpen, OperatorType.BraceClose, fun);
+
+        /*
+            Ensure that the function will be enclosed by the openning/closing operators given :
+            e.g. : Enclosed('(', ')', ArithmeticExpression) will ensure that our arithmetic expression is surrounded by ()
+        */
+        public T Enclosed<T>(OperatorType open, OperatorType close, Func<T> fun)
+        {
+            if (!IsOperator(open))
+            {
+                throw new InvalidOperationException($"missing enclosed begin operator: expected={open}, obtained={PeekToken()}");
+            }
+            var value = fun();
+            if (!IsOperator(close))
+            {
+                throw new InvalidOperationException($"missing enclosed final operator: expected={close}, obtained={PeekToken()}");
+            }
+            return value;
+        }
+
+        /*
+            Ensure that a statement is followed by an end of statement character (';' in our case)
+        */
+        public T Statement<T>(Func<T> fun)
+        {
+            var expression = fun();
+            EnsureEndOfStatement();
+            return expression;
+        }
+
+        public T Statement<T>() where T : new() => Statement<T>(() => new T());
 
         private bool IsType(TokenType type) => PeekToken().Type == type;
 
@@ -526,7 +642,7 @@ namespace Lahda.Parser
             return casted.Value;
         }
 
-        private bool IsValue<T>(TokenType type, T v) where T : class
+        private bool IsValueUnconsumed<T>(TokenType type, T v) where T : class
         {
             var tok = PeekToken();
             var casted = tok as ValueToken<T>;
@@ -534,8 +650,17 @@ namespace Lahda.Parser
             {
                 return false;
             }
-            NextToken();
             return true;
+        }
+
+        private bool IsValue<T>(TokenType type, T v) where T : class
+        {
+            if (IsValueUnconsumed<T>(type, v))
+            {
+                NextToken();
+                return true;
+            }
+            return false;
         }
     }
 }

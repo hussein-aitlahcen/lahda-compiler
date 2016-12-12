@@ -127,5 +127,14 @@ namespace Lahda.Tests
             var parser = GetParser(content);
             Assert.Throws(typeof(InvalidOperationException), parser.StatementsBlock);
         }
+
+        [Theory]
+        [InlineData("float a(float x) say x + 1; float b() say a(a(a(5))) + 1;")]
+        public void Parser_should_parse_function(string content)
+        {
+            var parser = GetParser(content);
+            parser.FunctionExpression();
+            parser.FunctionExpression();
+        }
     }
 }

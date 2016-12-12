@@ -24,17 +24,21 @@ namespace Lahda.Common
 
         public SymbolScope GetScope(int index) => m_scopes.ElementAt(index);
 
-        public void DefineSymbol(Symbol symbol)
+        public void DefineSymbol(AbstractSymbol symbol)
         {
             if (CurrentScope.ContainsKey(symbol.Name))
                 throw new InvalidOperationException($"identifier already defined for {symbol.Name}");
-            symbol.Pointer = NextPointer;
+            if (symbol is AbstractAddressableSymbol)
+            {
+                ((AbstractAddressableSymbol)symbol).Pointer = NextPointer;
+            }
             CurrentScope.Add(symbol.Name, symbol);
         }
 
-        public Symbol Search(string identifier)
+        public T Search<T>(string identifier)
+            where T : AbstractSymbol
         {
-            var symbol = Symbol.Unknow;
+            var symbol = AbstractSymbol.Unknow;
             var i = m_scopes.Count - 1;
             while (i >= 0 && symbol.IsUnknow)
             {
@@ -43,7 +47,7 @@ namespace Lahda.Common
                     symbol = scope[identifier];
                 i--;
             }
-            return symbol;
+            return (T)symbol;
         }
     }
 }

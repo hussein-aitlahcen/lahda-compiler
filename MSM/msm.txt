@@ -1,12 +1,18 @@
 
-Jeu d'instruction:
-==================
+Jeu d'instructions:
+===================
 
   halt
     Termine l'exécution du programme.
 
 Manipulation de la pile:
 ------------------------
+
+  drop
+    Supprime l'élément au sommet de la pile.
+
+  dup
+    Empile une copie de l'élément au sommet de la pile.
 
   push.i [int]
   push.f [float]
@@ -19,6 +25,18 @@ Manipulation de la pile:
   set [int]
     Dépile la valeur au sommet de la pile et l'affecte à la N-ième valeur depuis
     la base de la pile.
+
+Accès à la mémoire:
+-------------------
+
+  read
+    Dépile une adresse mémoire, puis empile le contenue de la case mémoire à
+    cette adresse.
+
+  write
+    Dépile une valeur puis une adresse. Affecte la valeur à la case mémoire
+    indiquée par l'adresse.
+    
 
 Arithmétique et logique:
 ------------------------
@@ -71,6 +89,23 @@ Branchements:
     Saut conditionel. Dépile une valeur entière du sommet de la pile, si elle
     est differente (resp. egale) de zéro, saute à l'adresse indiquée, sinon
     continue l'exécution à l'instruction suivante.
+
+Appels de fonctions:
+--------------------
+
+  prep [label]
+    Prépare un appel à la fonction [label]. Réserve deux emplacements au sommet
+    de la pile.
+
+  call [int]
+    Réalise l'appel à la fonction préparée par une instruction 'prep' dont les
+    [int] arguments ont étés empilés.
+
+  ret
+    Retourne depuis une fonction en renvoyant la valeur au sommet de la pile.
+    Réinitialise la pile dans l'état ou elle était au moment de l'instruction
+    prep correspondante et empile la valeur résultat.
+
 
 Communication:
 --------------

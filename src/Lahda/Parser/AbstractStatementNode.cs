@@ -1,4 +1,4 @@
-namespace Lahda.Parser.Impl
+namespace Lahda.Parser
 {
     public abstract class AbstractStatementNode : AbstractNode
     {

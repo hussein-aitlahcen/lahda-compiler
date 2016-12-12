@@ -2,7 +2,10 @@ namespace Lahda.Parser
 {
     public enum NodeType
     {
+        None,
+        Root,
         Literal,
+        Return,
         Operation,
         Identifier,
         Declaration,
@@ -14,5 +17,6 @@ namespace Lahda.Parser
         Continue,
         Print,
         Function,
+        Call
     }
 }

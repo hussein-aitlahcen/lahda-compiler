@@ -16,6 +16,8 @@ namespace Lahda
         ParentheseClose,
         BraceOpen,
         BraceClose,
+        BracketOpen,
+        BracketClose,
         Pow,
         Equals,
         NotEquals,
@@ -32,5 +34,6 @@ namespace Lahda
         ModAssign,
         Increment,
         Decrement,
+        Comma
     }
 }
