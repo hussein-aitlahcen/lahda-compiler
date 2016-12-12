@@ -34,6 +34,7 @@ namespace Lahda.Parser.Impl
         public override void OptimizeChilds()
         {
             Conditional.OptimizeChilds();
+            Iteration.OptimizeChilds();
         }
     }
 }

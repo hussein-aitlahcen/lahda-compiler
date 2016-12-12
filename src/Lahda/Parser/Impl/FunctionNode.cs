@@ -20,6 +20,7 @@ namespace Lahda.Parser.Impl
         public override void OptimizeChilds()
         {
             Identifier.OptimizeChilds();
+            Arguments.ForEach(a => a.OptimizeChilds());
             Statement.OptimizeChilds();
         }
 

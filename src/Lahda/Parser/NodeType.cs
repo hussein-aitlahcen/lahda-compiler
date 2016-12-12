@@ -4,6 +4,7 @@ namespace Lahda.Parser
     {
         None,
         Root,
+        MemoryAccess,
         Literal,
         Return,
         Operation,

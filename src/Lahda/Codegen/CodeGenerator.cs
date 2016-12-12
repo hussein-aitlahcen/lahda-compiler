@@ -65,21 +65,21 @@ namespace Lahda.Codegen
                     if (node is PrimitiveDeclarationNode)
                     {
                         var primDecl = (PrimitiveDeclarationNode)node;
-                        if (primDecl.Identifier.Symbol.Pointer > PointerIndex)
+                        if (primDecl.Identifier.Symbol.StackPointer > PointerIndex)
                         {
                             PointerIndex++;
-                            Write(Push());
+                            Write(Pushf());
                         }
                     }
                     else if (node is ArrayDeclarationNode)
                     {
                         var arrDecl = (ArrayDeclarationNode)node;
-                        if (arrDecl.Identifier.Symbol.Pointer > PointerIndex)
+                        if (arrDecl.Identifier.Symbol.StackPointer > PointerIndex)
                         {
                             for (var i = 0; i < arrDecl.Identifier.Symbol.Size; i++)
                             {
                                 PointerIndex++;
-                                Write(Push());
+                                Write(Pushf());
                             }
                         }
                     }
@@ -200,20 +200,45 @@ namespace Lahda.Codegen
                     {
                         var primDecl = (PrimitiveDeclarationNode)node;
                         Generate(primDecl.Expression);
-                        Write(Set(primDecl.Identifier.Symbol.Pointer));
+                        Write(Set(primDecl.Identifier.Symbol.StackPointer));
                     }
                     else if (node is ArrayDeclarationNode)
                     {
                         var arrDecl = (ArrayDeclarationNode)node;
-                        Generate(arrDecl.Expression);
-                        Write(Set(arrDecl.Identifier.Symbol.Pointer));
+                        var arrSize = ((LiteralNode)arrDecl.Identifier.IndexExpression).Value;
+                        for (var i = 0; i < arrSize; i++)
+                        {
+                            Write(Pushi());
+                            Write(MemRead());
+                            Write(Pushi(arrDecl.Identifier.Symbol.HeapPointer + i));
+                            Write(Addi());
+                            Write(Pushi());
+                            Write(MemWrite());
+                        }
                     }
                     break;
 
                 case NodeType.Assignation:
-                    var assign = (AssignationNode)node;
-                    Generate(assign.Expression);
-                    Write($"set {assign.Identifier.Symbol.Pointer}");
+                    if (node is PrimitiveAssignationNode)
+                    {
+                        var primAssign = (PrimitiveAssignationNode)node;
+                        Generate(primAssign.Expression);
+                        Write(Set(primAssign.Identifier.Symbol.StackPointer));
+                    }
+                    else if (node is ArrayAssignationNode)
+                    {
+                        var arrayAssign = (ArrayAssignationNode)node;
+                        Write(Pushi());
+                        Write(MemRead());
+                        Write(Pushi(arrayAssign.Identifier.Symbol.HeapPointer));
+                        Write(Addi());
+                        Generate(arrayAssign.Identifier.IndexExpression);
+                        Write(Ftoi());
+                        Write(Addi());
+                        Generate(arrayAssign.Expression);
+                        Write(Ftoi());
+                        Write(MemWrite());
+                    }
                     break;
 
                 case NodeType.Literal:
@@ -224,11 +249,20 @@ namespace Lahda.Codegen
                 case NodeType.Identifier:
                     if (node is PrimitiveIdentifierNode)
                     {
-                        Write(Get(((PrimitiveIdentifierNode)node).Symbol.Pointer));
+                        Write(Get(((PrimitiveIdentifierNode)node).Symbol.StackPointer));
                     }
                     else if (node is ArrayIdentifierNode)
                     {
-                        // TODO: push address
+                        var arrayIdent = (ArrayIdentifierNode)node;
+                        Write(Pushi());
+                        Write(MemRead());
+                        Write(Pushi(arrayIdent.Symbol.HeapPointer));
+                        Write(Addi());
+                        Generate(arrayIdent.IndexExpression);
+                        Write(Ftoi());
+                        Write(Addi());
+                        Write(MemRead());
+                        Write(Itof());
                     }
                     break;
 
@@ -236,8 +270,6 @@ namespace Lahda.Codegen
                     var print = (PrintNode)node;
                     Generate(print.Expression);
                     Write("out.f");
-
-                    // make sure we get to a new line after the print
                     Write("push.i 10");
                     Write("out.c");
                     break;
@@ -288,11 +320,14 @@ namespace Lahda.Codegen
                     Write(DeclareLabel(fun.Identifier.Symbol.Name));
                     // tree traversal 
                     for (var i = 0; i < fun.Arguments.Count; i++)
-                        Write(Push());
+                        Write(Pushf());
                     PreGenerate(fun.Statement);
                     Generate(fun.Statement);
-                    Write(Push());
-                    Write(Ret());
+                    if (fun.Identifier.Symbol.Name != "start")
+                    {
+                        Write(Pushf());
+                        Write(Ret());
+                    }
                     break;
 
                 case NodeType.Return:
@@ -321,11 +356,16 @@ namespace Lahda.Codegen
 
         private string Prep(string function) => $"prep {function}";
         private string Call(int argCount) => $"call {argCount}";
+        private string Addi() => "add.i";
         private string Ret() => "ret";
+        private string MemRead() => "read";
+        private string Ftoi() => "ftoi";
+        private string Itof() => "itof";
+        private string MemWrite() => "write";
         private string Set(int index) => $"set {index}";
         private string Get(int index) => $"get {index}";
-        private string Push() => Push(0);
-        private string Push(float x) => $"push.f {x}";
+        private string Pushi(int x = 0) => $"push.i {x}";
+        private string Pushf(float x = 0) => $"push.f {x}";
         private string JumpSpec(char type, string label) => $"jump{type} {label}";
         private string JumpFalse(string label) => JumpSpec('f', label);
         private string Jump(string label) => $"jump {label}";

@@ -8,13 +8,16 @@ namespace Lahda.Common
     {
         private Stack<SymbolScope> m_scopes;
 
+        private int HeapSize = 0;
+
         public SymbolTable()
         {
             m_scopes = new Stack<SymbolScope>();
             PushScope(); // rootScope
         }
 
-        public int NextPointer => m_scopes.Sum(scope => scope.VarNumber);
+        public int NextStackPointer => m_scopes.Sum(scope => scope.VarNumber);
+        public int NextHeapPointer => HeapSize;
 
         public void PushScope() => m_scopes.Push(new SymbolScope());
 
@@ -24,15 +27,26 @@ namespace Lahda.Common
 
         public SymbolScope GetScope(int index) => m_scopes.ElementAt(index);
 
-        public void DefineSymbol(AbstractSymbol symbol)
+        public T DefineSymbol<T>(T symbol)
+            where T : AbstractSymbol
         {
             if (CurrentScope.ContainsKey(symbol.Name))
-                throw new InvalidOperationException($"identifier already defined for {symbol.Name}");
-            if (symbol is AbstractAddressableSymbol)
             {
-                ((AbstractAddressableSymbol)symbol).Pointer = NextPointer;
+                throw new InvalidOperationException($"identifier already defined for {symbol.Name}");
+            }
+            var primitiveSymbol = symbol as PrimitiveVariableSymbol;
+            if (primitiveSymbol != null)
+            {
+                primitiveSymbol.StackPointer = NextStackPointer;
+            }
+            var arraySymbol = symbol as ArrayVariableSymbol;
+            if (arraySymbol != null)
+            {
+                arraySymbol.HeapPointer = NextHeapPointer;
+                HeapSize += arraySymbol.Size;
             }
             CurrentScope.Add(symbol.Name, symbol);
+            return symbol;
         }
 
         public T Search<T>(string identifier)
@@ -44,7 +58,9 @@ namespace Lahda.Common
             {
                 var scope = GetScope(i);
                 if (scope.ContainsKey(identifier))
+                {
                     symbol = scope[identifier];
+                }
                 i--;
             }
             return (T)symbol;

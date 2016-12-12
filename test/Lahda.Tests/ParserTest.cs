@@ -136,5 +136,14 @@ namespace Lahda.Tests
             parser.FunctionExpression();
             parser.FunctionExpression();
         }
+
+        [Theory]
+        [InlineData("float start() { var array[10]; }")]
+        [InlineData("float start() { var array[15]; array[10]++; }")]
+        public void Parser_should_parse_arrays(string content)
+        {
+            var parser = GetParser(content);
+            parser.FunctionExpression();
+        }
     }
 }

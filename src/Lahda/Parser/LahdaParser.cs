@@ -144,7 +144,7 @@ namespace Lahda.Parser
         {
             public AbstractStatementNode Initialization { get; set; }
             public AbstractExpressionNode StopCondition { get; set; }
-            public AssignationNode Iteration { get; set; }
+            public AbstractStatementNode Iteration { get; set; }
         }
 
         /*
@@ -208,11 +208,7 @@ namespace Lahda.Parser
             Scoped(() => BraceEnclosed(() =>
             {
                 var statements = new List<AbstractStatementNode>();
-                // Why don't we use IsOperator here ? Because we don't want to consume it, the 'BraceEnclosed' function will do it for us
-                ValueToken<string> tok;
-                while ((tok = PeekToken() as ValueToken<string>) != null &&
-                        (tok.Type != TokenType.Operator ||
-                        !Lexer.Configuration.IsOperator(OperatorType.BraceClose, tok.Value)))
+                while (!IsOperatorUnconsumed(OperatorType.BraceClose))
                 {
                     statements.Add(NextStatement());
                 }
@@ -225,7 +221,7 @@ namespace Lahda.Parser
             => ParentheseEnclosed(() =>
             {
                 var expressions = new List<AbstractExpressionNode>();
-                while (!IsType(TokenType.Operator))
+                while (!IsOperatorUnconsumed(OperatorType.ParentheseClose))
                 {
                     expressions.Add(ArithmeticExpression());
                     if (IsOperator(OperatorType.Comma)) ;
@@ -257,7 +253,7 @@ namespace Lahda.Parser
 
                             case ObjectType.Array:
                                 // TODO: define size ? SHOULD BE A POINTER
-                                args.Add(new ArrayIdentifierNode(DefineArraySymbol(0)));
+                                args.Add(new ArrayIdentifierNode(DefineArraySymbol(0), new LiteralNode(0)));
                                 break;
 
                             default:
@@ -285,44 +281,31 @@ namespace Lahda.Parser
                 won't be consumed, this line consume it when necessary.
             */
             if (IsKeyword(KeywordType.Var)) ;
-
             var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"declaration identifier not found");
-
-            if (IsOperator(OperatorType.BracketOpen))
+            if (IsOperatorUnconsumed(OperatorType.BracketOpen))
             {
-                ArithmeticExpression();
-                // TODO: DEFINE SIZE
-                var size = 0;
-                if (!IsOperator(OperatorType.BracketClose))
+                return BracketEnclosed(() =>
                 {
-                    throw new InvalidOperationException("expected closing bracket");
-                }
-                var arrSymbol = new ArrayVariableSymbol(ident, size);
-                Symbols.DefineSymbol(arrSymbol);
-                return new ArrayDeclarationNode(new ArrayIdentifierNode(arrSymbol));
+                    if (!IsType(TokenType.Floating))
+                    {
+                        throw new InvalidOperationException("const size expected");
+                    }
+                    var size = (int)((ValueToken<float>)NextToken()).Value;
+                    var arrSymbol = Symbols.DefineSymbol(new ArrayVariableSymbol(ident, size));
+                    return new ArrayDeclarationNode(new ArrayIdentifierNode(arrSymbol, new LiteralNode(size)));
+                });
             }
-
             if (!IsOperator(OperatorType.Assign))
+            {
                 throw new InvalidOperationException($"declaration operator missing {PeekToken()}");
-
+            }
             var expression = ArithmeticExpression();
-
-            // define the new symbol
-            var symbol = new PrimitiveVariableSymbol(ident);
-            Symbols.DefineSymbol(symbol);
-
+            var symbol = Symbols.DefineSymbol(new PrimitiveVariableSymbol(ident));
             return new PrimitiveDeclarationNode(new PrimitiveIdentifierNode(symbol), expression);
         }
 
-        /*
-            An assignation is in the form of : 
-                - x = 5;
-                - x = y * 1 / x;
-        */
-        public AssignationNode AssignationExpression()
+        private AbstractStatementNode AbstractAssign<T>(AbstractExpressionNode left, Func<AbstractExpressionNode, AbstractStatementNode> outputNodeProvider)
         {
-            var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"assignation identifier not found");
-
             var assignationOperators = new[]
             {
                 OperatorType.Assign,
@@ -334,15 +317,11 @@ namespace Lahda.Parser
                 OperatorType.Increment,
                 OperatorType.Decrement,
             };
-
             var op = assignationOperators.FirstOrDefault(IsOperator);
             if (op == OperatorType.None)
+            {
                 throw new InvalidOperationException($"wrong assignation operator {PeekToken()}");
-
-            var symbol = Symbols.Search<PrimitiveVariableSymbol>(ident);
-            if (symbol.IsUnknow)
-                throw new InvalidOperationException($"unknow symbol {ident}");
-
+            }
             AbstractExpressionNode expression = null;
             switch (op)
             {
@@ -351,34 +330,61 @@ namespace Lahda.Parser
                     break;
 
                 case OperatorType.AddAssign:
-                    expression = new OperationNode(OperatorType.Add, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Add, left, ArithmeticExpression());
                     break;
 
                 case OperatorType.SubAssign:
-                    expression = new OperationNode(OperatorType.Sub, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Sub, left, ArithmeticExpression());
                     break;
 
                 case OperatorType.MulAssign:
-                    expression = new OperationNode(OperatorType.Mul, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Mul, left, ArithmeticExpression());
                     break;
 
                 case OperatorType.DivAssign:
-                    expression = new OperationNode(OperatorType.Div, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Div, left, ArithmeticExpression());
                     break;
 
                 case OperatorType.ModAssign:
-                    expression = new OperationNode(OperatorType.Mod, new PrimitiveIdentifierNode(symbol), ArithmeticExpression());
+                    expression = new OperationNode(OperatorType.Mod, left, ArithmeticExpression());
                     break;
 
                 case OperatorType.Increment:
-                    expression = OperationNode.Increment(new PrimitiveIdentifierNode(symbol));
+                    expression = OperationNode.Increment(left);
                     break;
 
                 case OperatorType.Decrement:
-                    expression = OperationNode.Decrement(new PrimitiveIdentifierNode(symbol));
+                    expression = OperationNode.Decrement(left);
                     break;
             }
-            return new AssignationNode(new PrimitiveIdentifierNode(symbol), expression);
+            return outputNodeProvider(expression);
+        }
+
+        /*
+            An assignation is in the form of : 
+                - x = 5;
+                - x = y * 1 / z;
+        */
+        public AbstractStatementNode AssignationExpression()
+        {
+            var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"assignation identifier not found");
+            var symbol = Symbols.Search<AbstractAddressableSymbol>(ident);
+            if (symbol.IsUnknow)
+            {
+                throw new InvalidOperationException($"unknow symbol {ident}");
+            }
+            if (symbol is PrimitiveVariableSymbol)
+            {
+                var primitiveIdent = new PrimitiveIdentifierNode((PrimitiveVariableSymbol)symbol);
+                return AbstractAssign<PrimitiveVariableSymbol>(primitiveIdent, e => new PrimitiveAssignationNode(primitiveIdent, e));
+            }
+            else if (symbol is ArrayVariableSymbol)
+            {
+                var elementIndex = BracketEnclosed(ArithmeticExpression);
+                var arrayIdent = new ArrayIdentifierNode((ArrayVariableSymbol)symbol, elementIndex);
+                return AbstractAssign<ArrayVariableSymbol>(arrayIdent, e => new ArrayAssignationNode(arrayIdent, e));
+            }
+            throw new InvalidOperationException("unknow symbol assignation type");
         }
 
         // The arithmetic expression starts at the higher level, the Logical Or.
@@ -390,8 +396,9 @@ namespace Lahda.Parser
             return () =>
             {
                 if (level == ArithmeticLevel.Primitive)
+                {
                     return ArithmeticPrimitive();
-
+                }
                 return ExecuteIfOperator
                 (
                     ArithmeticOperation(level - 1)(),
@@ -494,7 +501,7 @@ namespace Lahda.Parser
                     {
                         throw new InvalidOperationException($"unknow symbol {ident}");
                     }
-                    if (IsValueUnconsumed(TokenType.Operator, Lexer.Configuration.GetOperator(OperatorType.ParentheseOpen)))
+                    if (IsOperatorUnconsumed(OperatorType.ParentheseOpen))
                     {
                         if (!(symbol is FunctionSymbol))
                         {
@@ -506,26 +513,26 @@ namespace Lahda.Parser
                     {
                         throw new InvalidOperationException($"wrong symbol type for atomic identifier in primitive {symbol.Type}");
                     }
+                    var arraySymbol = symbol as ArrayVariableSymbol;
+                    if (arraySymbol != null)
+                    {
+                        var index = BracketEnclosed(ArithmeticExpression);
+                        return new ArrayIdentifierNode(arraySymbol, index);
+                    }
                     return new PrimitiveIdentifierNode((PrimitiveVariableSymbol)symbol);
 
                 case TokenType.Operator:
-                    var op = ((ValueToken<string>)token).Value;
-                    switch (Lexer.Configuration.GetOperatorType(op))
+                    if (IsOperatorUnconsumed(OperatorType.ParentheseOpen))
                     {
-                        case OperatorType.ParentheseOpen:
-                            // here is the recursive call of our arithmetic function
-                            return ParentheseEnclosed(ArithmeticExpression);
-
-                        // oppose the expression
-                        case OperatorType.Sub:
-                            NextToken();
-                            return OperationNode.Oppose(ArithmeticPrimitive());
-
-                        // negate the expression
-                        case OperatorType.Negate:
-                            NextToken();
-                            return OperationNode.Negate(ArithmeticPrimitive());
-
+                        return ParentheseEnclosed(ArithmeticExpression);
+                    }
+                    else if (IsOperator(OperatorType.Sub))
+                    {
+                        return OperationNode.Oppose(ArithmeticPrimitive());
+                    }
+                    else if (IsOperator(OperatorType.Negate))
+                    {
+                        return OperationNode.Negate(ArithmeticPrimitive());
                     }
                     break;
             }
@@ -545,8 +552,7 @@ namespace Lahda.Parser
             where T : AbstractSymbol
         {
             var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"identifier not found");
-            var symbol = fun(ident);
-            Symbols.DefineSymbol(symbol);
+            var symbol = Symbols.DefineSymbol(fun(ident));
             return symbol;
         }
 
@@ -569,6 +575,8 @@ namespace Lahda.Parser
             Symbols.PopScope();
             return value;
         }
+
+        public T BracketEnclosed<T>(Func<T> fun) => Enclosed(OperatorType.BracketOpen, OperatorType.BracketClose, fun);
 
         /*
             Simple overload, ensure that our function is surrounded by two parentheses.
@@ -611,9 +619,10 @@ namespace Lahda.Parser
         public T Statement<T>() where T : new() => Statement<T>(() => new T());
 
         private bool IsType(TokenType type) => PeekToken().Type == type;
-
+        private bool IsKeywordUnconsumed(KeywordType key) => IsValueUnconsumed<string>(TokenType.Keyword, Lexer.Configuration.GetKeyword(key));
         private bool IsKeyword(KeywordType key) => IsValue<string>(TokenType.Keyword, Lexer.Configuration.GetKeyword(key));
 
+        private bool IsOperatorUnconsumed(OperatorType op) => IsValueUnconsumed<string>(TokenType.Operator, Lexer.Configuration.GetOperator(op));
         private bool IsOperator(OperatorType op) => IsValue<string>(TokenType.Operator, Lexer.Configuration.GetOperator(op));
 
         private OperatorType GetOperatorType() => Lexer.Configuration.GetOperatorType(GetTokenValueSilent<string>(TokenType.Operator));
@@ -626,7 +635,9 @@ namespace Lahda.Parser
             {
                 return GetTokenValueOrThrow<T>(type, "");
             }
-            catch (Exception e) { }
+            catch (Exception e)
+            {
+            }
             return def;
         }
 
