@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Lahda.Parser.Impl
 {
@@ -24,6 +25,6 @@ namespace Lahda.Parser.Impl
             Statement.OptimizeChilds();
         }
 
-        public override string ToString() => $"FUN";
+        public override string ToString() => $"FUN {Identifier.Symbol.Name}: {ReturnType} (" + string.Join(", ", Arguments) + $")\n {Statement}";
     }
 }

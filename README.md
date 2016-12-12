@@ -84,7 +84,13 @@ float start()
 
 ```assembly
 ; ROOT
-; FUN
+; FUN fibo: Floating (n)
+;  IF (n NotGreater 2) THEN
+; 	RET 1
+; ELSE
+; 	RET (CALL fibo((n Sub 1)) Add CALL fibo((n Sub 2)))
+; ENDIF
+; 
 .fibo
 push.f 0
 ; IF (n NotGreater 2) THEN
@@ -120,7 +126,18 @@ ret
 .endif_0_1
 push.f 0
 ret
-; FUN
+; FUN start: Floating ()
+;  DECL i = 0
+; WHILE
+; 	IF (i Less 10) THEN
+; 		PRINT CALL fibo((i Add 1))
+; 	ELSE
+; 		BREAK
+; 
+; 	ENDIF
+; 
+; 
+; 
 .start
 push.f 0
 ; DECL i = 0
