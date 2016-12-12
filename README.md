@@ -69,83 +69,97 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 ### Example
 
 ```javascript
-var i = 0;
-var x = false; 
-do 
-{ 
-  if(i > 5) 
-    x = true; 
-  i++; 
-} until(x); 
-print i; // show 7
+float fibo(float n) 
+  if(n <= 2) 
+    say 1; 
+  else 
+    say fibo(n - 1) + fibo(n - 2); 
+
+float start() 
+  for(var i = 0; i < 10; i++) 
+    print fibo(i + 1);
 ```
 
 #### Generated code
 
 ```assembly
-.start
-; @i = 0
+; ROOT
+; FUN
+.fibo
 push.f 0
-; @x = 1
+; IF (n NotGreater 2) THEN
+; 	RET 1
+; ELSE
+; 	RET (CALL fibo((n Sub 1)) Add CALL fibo((n Sub 2)))
+; ENDIF
+; 
+get 0
+push.f 2
+cmple.f
+jumpf else_0_1
+; RET 1
+push.f 1
+ret
+jump endif_0_1
+.else_0_1
+; RET (CALL fibo((n Sub 1)) Add CALL fibo((n Sub 2)))
+; CALL fibo((n Sub 1))
+prep fibo
+get 0
+push.f 1
+sub.f
+call 1
+; CALL fibo((n Sub 2))
+prep fibo
+get 0
+push.f 2
+sub.f
+call 1
+add.f
+ret
+.endif_0_1
+push.f 0
+ret
+; FUN
+.start
 push.f 0
 ; DECL i = 0
 push.f 0
 set 0
-; DECL x = 0
-push.f 0
-set 1
 .beginloop_0_1
-; IF (x Equals 0) THEN
-; 	IF (i Greater 5) THEN
-; 		ASSIGN x = 1
-; 	ELSE
-; 
-; 	ENDIF
-; 
-; 	ASSIGN i = (i Add 1)
-; 
+; IF (i Less 10) THEN
+; 	PRINT CALL fibo((i Add 1))
 ; ELSE
 ; 	BREAK
 ; 
 ; ENDIF
 ; 
-get 1
-push.f 0
-cmpeq.f
-jumpf else_0_1
-; IF (i Greater 5) THEN
-; 	ASSIGN x = 1
-; ELSE
-; 
-; ENDIF
-; 
 get 0
-push.f 5
-cmpgt.f
-jumpf else_0_1_1
-; ASSIGN x = 1
+push.f 10
+cmplt.f
+jumpf else_0_2
+; PRINT CALL fibo((i Add 1))
+; CALL fibo((i Add 1))
+prep fibo
+get 0
 push.f 1
-set 1
-jump endif_0_1_1
-.else_0_1_1
-.endif_0_1_1
+add.f
+call 1
+out.f
+push.i 10
+out.c
+jump endif_0_2
+.else_0_2
+; BREAK
+jump endloop_0_1
+.endif_0_2
+.iterloop_0_1
 ; ASSIGN i = (i Add 1)
 get 0
 push.f 1
 add.f
 set 0
-jump endif_0_1
-.else_0_1
-; BREAK
-jump endloop_0_1
-.endif_0_1
-.iterloop_0_1
 jump beginloop_0_1
 .endloop_0_1
-; PRINT i
-get 0
-out.f
-push.i 10
-out.c
 halt
 ```
