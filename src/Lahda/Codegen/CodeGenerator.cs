@@ -28,7 +28,6 @@ namespace Lahda.Codegen
         public void Build()
         {
             InitGenerate(RootNode);
-            Write("halt");
         }
 
         public void Write(string line) => Output.Write(line);
@@ -43,7 +42,6 @@ namespace Lahda.Codegen
 
         private void InitGenerate(AbstractNode node)
         {
-            PointerIndex = -1;
             Generate(node);
         }
 
@@ -69,18 +67,6 @@ namespace Lahda.Codegen
                         {
                             PointerIndex++;
                             Write(Pushf());
-                        }
-                    }
-                    else if (node is ArrayDeclarationNode)
-                    {
-                        var arrDecl = (ArrayDeclarationNode)node;
-                        if (arrDecl.Identifier.Symbol.StackPointer > PointerIndex)
-                        {
-                            for (var i = 0; i < arrDecl.Identifier.Symbol.Size; i++)
-                            {
-                                PointerIndex++;
-                                Write(Pushf());
-                            }
                         }
                     }
                     break;
@@ -321,12 +307,17 @@ namespace Lahda.Codegen
                     // tree traversal 
                     for (var i = 0; i < fun.Arguments.Count; i++)
                         Write(Pushf());
+                    PointerIndex = fun.Arguments.Count - 1;
                     PreGenerate(fun.Statement);
                     Generate(fun.Statement);
                     if (fun.Identifier.Symbol.Name != "start")
                     {
                         Write(Pushf());
                         Write(Ret());
+                    }
+                    else
+                    {
+                        Write(Halt());
                     }
                     break;
 
@@ -357,6 +348,7 @@ namespace Lahda.Codegen
         private string Prep(string function) => $"prep {function}";
         private string Call(int argCount) => $"call {argCount}";
         private string Addi() => "add.i";
+        private string Halt() => "halt";
         private string Ret() => "ret";
         private string MemRead() => "read";
         private string Ftoi() => "ftoi";

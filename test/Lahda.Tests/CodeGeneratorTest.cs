@@ -11,7 +11,7 @@ namespace Lahda.Tests
     {
         [Theory]
         [InlineData("float fibo(float n) if(n <= 2) say 1; else say fibo(n - 1) + fibo(n - 2); float start() for(var i = 0; i < 10; i++) print fibo(i + 1);", 1)]
-        [InlineData("float start() { var array[10]; for(var i = 0; i < 10; i++) array[i] = i * i; for(var i = 0; i < 10; i++) print array[i]; }", 2)]
+        [InlineData("float cst(float x) { var a = 10; for(var i = 0; i < 3; i++) a *= 2; say a * x; } float start() print cst(10);", 2)]
         public void CodeGenerator_should_generate_godlike_code(string content, int i)
         {
             var codeSource = CodeSource.FromMemory(content);

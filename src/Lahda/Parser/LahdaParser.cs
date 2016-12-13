@@ -284,16 +284,16 @@ namespace Lahda.Parser
             var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"declaration identifier not found");
             if (IsOperatorUnconsumed(OperatorType.BracketOpen))
             {
-                return BracketEnclosed(() =>
+                var size = BracketEnclosed(() =>
                 {
                     if (!IsType(TokenType.Floating))
                     {
                         throw new InvalidOperationException("const size expected");
                     }
-                    var size = (int)((ValueToken<float>)NextToken()).Value;
-                    var arrSymbol = Symbols.DefineSymbol(new ArrayVariableSymbol(ident, size));
-                    return new ArrayDeclarationNode(new ArrayIdentifierNode(arrSymbol, new LiteralNode(size)));
+                    return (int)((ValueToken<float>)NextToken()).Value;
                 });
+                var arrSymbol = Symbols.DefineSymbol(new ArrayVariableSymbol(ident, size));
+                return new ArrayDeclarationNode(new ArrayIdentifierNode(arrSymbol, new LiteralNode(size)));
             }
             if (!IsOperator(OperatorType.Assign))
             {
