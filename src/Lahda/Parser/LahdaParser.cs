@@ -117,40 +117,35 @@ namespace Lahda.Parser
             }
             forever; 
         */
-        public LoopNode DoExpression()
+        public LoopNode DoExpression() =>
+            IdentifiedLoop(loopId =>
+                IdentifiedCond(condId =>
+                {
+                    var stmt = NextStatement();
+                    switch (GetKeywordType())
+                    {
+                        case KeywordType.While: return DoWhileExpression(loopId, condId, stmt);
+                        case KeywordType.Until: return DoUntilExpression(loopId, condId, stmt);
+                        case KeywordType.Forever: return DoForeverExpression(loopId, condId, stmt);
+                        default: throw new InvalidOperationException("invalid do expression");
+                    }
+                }));
+
+        public LoopNode DoWhileExpression(int loopId, int condId, AbstractStatementNode statement)
         {
-            var statement = NextStatement();
-            switch (GetKeywordType())
-            {
-                case KeywordType.While: return DoWhileExpression(statement);
-                case KeywordType.Until: return DoUntilExpression(statement);
-                case KeywordType.Forever: return DoForeverExpression(statement);
-            }
-            throw new InvalidOperationException("invalid do expression");
+            var stopCondition = ParentheseEnclosed(ArithmeticExpression);
+            return new LoopNode(loopId, condId, stopCondition, statement);
         }
 
-        public LoopNode DoWhileExpression(AbstractStatementNode statement) =>
-            IdentifiedLoop(id =>
-                IdentifiedCond(condId =>
-                {
-                    var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-                    return new LoopNode(id, condId, stopCondition, statement);
-                }));
+        public LoopNode DoUntilExpression(int loopId, int condId, AbstractStatementNode statement)
+        {
+            var stopCondition = ParentheseEnclosed(ArithmeticExpression);
+            return new LoopNode(loopId, condId, OperationNode.Negate(stopCondition), statement);
+        }
 
-        public LoopNode DoUntilExpression(AbstractStatementNode statement) =>
-            IdentifiedLoop(id =>
-                IdentifiedCond(condId =>
-                {
-                    var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-                    return new LoopNode(id, condId, OperationNode.Negate(stopCondition), statement);
-                }));
+        public LoopNode DoForeverExpression(int loopId, int condId, AbstractStatementNode statement) =>
+            new LoopNode(loopId, condId, LiteralNode.True, statement);
 
-        public LoopNode DoForeverExpression(AbstractStatementNode statement) =>
-            IdentifiedLoop(id =>
-                IdentifiedCond(condId =>
-                {
-                    return new LoopNode(id, condId, LiteralNode.True, statement);
-                }));
 
         public LoopNode WhileExpression() =>
             IdentifiedLoop(id =>
