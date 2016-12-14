@@ -8,8 +8,6 @@ namespace Lahda.Common
     {
         private Stack<SymbolScope> m_scopes;
 
-        private int HeapSize = 0;
-
         public SymbolTable()
         {
             m_scopes = new Stack<SymbolScope>();
@@ -17,7 +15,6 @@ namespace Lahda.Common
         }
 
         public int NextStackPointer => m_scopes.Sum(scope => scope.VarNumber);
-        public int NextHeapPointer => HeapSize;
 
         public void PushScope() => m_scopes.Push(new SymbolScope());
 
@@ -34,16 +31,10 @@ namespace Lahda.Common
             {
                 throw new InvalidOperationException($"identifier already defined for {symbol.Name}");
             }
-            var primitiveSymbol = symbol as PrimitiveVariableSymbol;
+            var primitiveSymbol = symbol as AbstractAddressableSymbol;
             if (primitiveSymbol != null)
             {
-                primitiveSymbol.StackPointer = NextStackPointer;
-            }
-            var arraySymbol = symbol as ArrayVariableSymbol;
-            if (arraySymbol != null)
-            {
-                arraySymbol.HeapPointer = NextHeapPointer;
-                HeapSize += arraySymbol.Size;
+                primitiveSymbol.Pointer = NextStackPointer;
             }
             CurrentScope.Add(symbol.Name, symbol);
             return symbol;
@@ -62,6 +53,10 @@ namespace Lahda.Common
                     symbol = scope[identifier];
                 }
                 i--;
+            }
+            if (symbol.IsUnknow)
+            {
+                throw new InvalidOperationException($"unknow symbol {identifier}");
             }
             return (T)symbol;
         }

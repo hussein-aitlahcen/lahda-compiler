@@ -4,12 +4,12 @@ namespace Lahda.Parser
     {
         None,
         Root,
-        MemoryAccess,
         Literal,
         Return,
         Operation,
         Identifier,
         Declaration,
+        PointerAssignation,
         Assignation,
         Block,
         Conditional,
@@ -18,6 +18,8 @@ namespace Lahda.Parser
         Continue,
         Print,
         Function,
-        Call
+        Call,
+        Dereference,
+        Reference
     }
 }

@@ -3,7 +3,7 @@ namespace Lahda
     public enum ObjectType
     {
         Floating,
-        Array,
+        Pointer,
         Function
     }
 }

@@ -5,6 +5,6 @@ namespace Lahda.Common
 {
     public sealed class SymbolScope : Dictionary<string, AbstractSymbol>
     {
-        public int VarNumber => Values.Count(symb => symb is PrimitiveVariableSymbol);
+        public int VarNumber => Values.Count(symb => symb is AbstractAddressableSymbol);
     }
 }

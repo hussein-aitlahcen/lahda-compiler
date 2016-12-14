@@ -2,8 +2,13 @@ using Lahda.Common;
 
 namespace Lahda.Parser.Impl
 {
-    public sealed class FunctionIdentifierNode : AbstractIdentifierNode<FunctionSymbol>
+    public sealed class FunctionIdentifierNode : AbstractIdentifierNode
     {
-        public FunctionIdentifierNode(FunctionSymbol symbol) : base(symbol) { }
+        public FunctionSymbol Symbol { get; }
+
+        public FunctionIdentifierNode(FunctionSymbol symbol)
+        {
+            Symbol = symbol;
+        }
     }
 }

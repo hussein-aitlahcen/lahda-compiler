@@ -248,12 +248,11 @@ namespace Lahda.Parser
                         switch (argType)
                         {
                             case ObjectType.Floating:
-                                args.Add(new PrimitiveIdentifierNode(DefinePrimitiveSymbol()));
+                                args.Add(new AddressableIdentifierNode(DefinePrimitiveSymbol()));
                                 break;
 
-                            case ObjectType.Array:
-                                // TODO: define size ? SHOULD BE A POINTER
-                                args.Add(new ArrayIdentifierNode(DefineArraySymbol(0), new LiteralNode(0)));
+                            case ObjectType.Pointer:
+                                args.Add(new AddressableIdentifierNode(DefineArraySymbol()));
                                 break;
 
                             default:
@@ -284,16 +283,9 @@ namespace Lahda.Parser
             var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"declaration identifier not found");
             if (IsOperatorUnconsumed(OperatorType.BracketOpen))
             {
-                var size = BracketEnclosed(() =>
-                {
-                    if (!IsType(TokenType.Floating))
-                    {
-                        throw new InvalidOperationException("const size expected");
-                    }
-                    return (int)((ValueToken<float>)NextToken()).Value;
-                });
-                var arrSymbol = Symbols.DefineSymbol(new ArrayVariableSymbol(ident, size));
-                return new ArrayDeclarationNode(new ArrayIdentifierNode(arrSymbol, new LiteralNode(size)));
+                var indexExpression = BracketEnclosed(ArithmeticExpression);
+                var arrSymbol = Symbols.DefineSymbol(new ArrayVariableSymbol(ident));
+                return new AddressableDeclarationNode(new AddressableIdentifierNode(arrSymbol), indexExpression);
             }
             if (!IsOperator(OperatorType.Assign))
             {
@@ -301,10 +293,10 @@ namespace Lahda.Parser
             }
             var expression = ArithmeticExpression();
             var symbol = Symbols.DefineSymbol(new PrimitiveVariableSymbol(ident));
-            return new PrimitiveDeclarationNode(new PrimitiveIdentifierNode(symbol), expression);
+            return new AddressableDeclarationNode(new AddressableIdentifierNode(symbol), expression);
         }
 
-        private AbstractStatementNode AbstractAssign<T>(AbstractExpressionNode left, Func<AbstractExpressionNode, AbstractStatementNode> outputNodeProvider)
+        private AbstractExpressionNode AbstractAssign(AbstractExpressionNode left)
         {
             var assignationOperators = new[]
             {
@@ -357,7 +349,7 @@ namespace Lahda.Parser
                     expression = OperationNode.Decrement(left);
                     break;
             }
-            return outputNodeProvider(expression);
+            return expression;
         }
 
         /*
@@ -367,24 +359,31 @@ namespace Lahda.Parser
         */
         public AbstractStatementNode AssignationExpression()
         {
-            var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"assignation identifier not found");
-            var symbol = Symbols.Search<AbstractAddressableSymbol>(ident);
-            if (symbol.IsUnknow)
+            AbstractExpressionNode left;
+            if (IsOperatorUnconsumed(OperatorType.Dereference))
             {
-                throw new InvalidOperationException($"unknow symbol {ident}");
+                left = ArithmeticExpression();
             }
-            if (symbol is PrimitiveVariableSymbol)
+            else
             {
-                var primitiveIdent = new PrimitiveIdentifierNode((PrimitiveVariableSymbol)symbol);
-                return AbstractAssign<PrimitiveVariableSymbol>(primitiveIdent, e => new PrimitiveAssignationNode(primitiveIdent, e));
+                var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"assignation identifier not found");
+                var symbol = Symbols.Search<AbstractAddressableSymbol>(ident);
+                var identNode = new AddressableIdentifierNode(symbol);
+                if (symbol is PrimitiveVariableSymbol)
+                {
+                    return new AssignationNode(identNode, AbstractAssign(identNode));
+                }
+                else if (symbol is ArrayVariableSymbol)
+                {
+                    var indexExpression = BracketEnclosed(ArithmeticExpression);
+                    left = new OperationNode(OperatorType.Add, identNode, indexExpression);
+                }
+                else
+                {
+                    throw new InvalidOperationException("unknow symbol assignation type");
+                }
             }
-            else if (symbol is ArrayVariableSymbol)
-            {
-                var elementIndex = BracketEnclosed(ArithmeticExpression);
-                var arrayIdent = new ArrayIdentifierNode((ArrayVariableSymbol)symbol, elementIndex);
-                return AbstractAssign<ArrayVariableSymbol>(arrayIdent, e => new ArrayAssignationNode(arrayIdent, e));
-            }
-            throw new InvalidOperationException("unknow symbol assignation type");
+            return new PointerAssignationNode(left, AbstractAssign(left));
         }
 
         // The arithmetic expression starts at the higher level, the Logical Or.
@@ -497,10 +496,8 @@ namespace Lahda.Parser
                 case TokenType.Identifier:
                     var ident = ((ValueToken<string>)NextToken()).Value;
                     var symbol = Symbols.Search<AbstractSymbol>(ident);
-                    if (symbol.IsUnknow)
-                    {
-                        throw new InvalidOperationException($"unknow symbol {ident}");
-                    }
+
+                    // function call
                     if (IsOperatorUnconsumed(OperatorType.ParentheseOpen))
                     {
                         if (!(symbol is FunctionSymbol))
@@ -509,38 +506,59 @@ namespace Lahda.Parser
                         }
                         return CallExpression((FunctionSymbol)symbol);
                     }
-                    if (symbol.Type == ObjectType.Function)
+
+                    if (!(symbol is AbstractAddressableSymbol))
                     {
                         throw new InvalidOperationException($"wrong symbol type for atomic identifier in primitive {symbol.Type}");
                     }
+
                     var arraySymbol = symbol as ArrayVariableSymbol;
                     if (arraySymbol != null)
                     {
-                        var index = BracketEnclosed(ArithmeticExpression);
-                        return new ArrayIdentifierNode(arraySymbol, index);
+                        if (IsOperatorUnconsumed(OperatorType.BracketOpen))
+                        {
+                            var indexExpression = BracketEnclosed(ArithmeticExpression);
+                            return new DereferenceNode(new OperationNode(OperatorType.Add, new AddressableIdentifierNode(arraySymbol), indexExpression));
+                        }
                     }
-                    return new PrimitiveIdentifierNode((PrimitiveVariableSymbol)symbol);
+
+                    return new AddressableIdentifierNode((AbstractAddressableSymbol)symbol);
 
                 case TokenType.Operator:
+                    // (E)
                     if (IsOperatorUnconsumed(OperatorType.ParentheseOpen))
                     {
                         return ParentheseEnclosed(ArithmeticExpression);
                     }
+                    // -E
                     else if (IsOperator(OperatorType.Sub))
                     {
                         return OperationNode.Oppose(ArithmeticPrimitive());
                     }
+                    // !E
                     else if (IsOperator(OperatorType.Negate))
                     {
                         return OperationNode.Negate(ArithmeticPrimitive());
+                    }
+                    // @a
+                    else if (IsOperator(OperatorType.Reference))
+                    {
+                        var refIdent = GetTokenValueOrThrow<string>(TokenType.Identifier, "expected identifier");
+                        var refSymbol = Symbols.Search<AbstractAddressableSymbol>(refIdent);
+                        return new ReferenceNode(new AddressableIdentifierNode(refSymbol));
+                    }
+                    // :E
+                    else if (IsOperator(OperatorType.Dereference))
+                    {
+                        return new DereferenceNode(ArithmeticExpression());
                     }
                     break;
             }
             throw new InvalidOperationException($"arithmetic primitive unknow type {token}");
         }
 
-        public ArrayVariableSymbol DefineArraySymbol(int size)
-            => DefineSymbol<ArrayVariableSymbol>(ident => new ArrayVariableSymbol(ident, size));
+        public ArrayVariableSymbol DefineArraySymbol()
+            => DefineSymbol<ArrayVariableSymbol>(ident => new ArrayVariableSymbol(ident));
 
         public PrimitiveVariableSymbol DefinePrimitiveSymbol()
             => DefineSymbol<PrimitiveVariableSymbol>(ident => new PrimitiveVariableSymbol(ident));

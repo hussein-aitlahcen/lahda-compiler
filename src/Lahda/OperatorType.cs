@@ -34,6 +34,8 @@ namespace Lahda
         ModAssign,
         Increment,
         Decrement,
-        Comma
+        Comma,
+        Dereference,
+        Reference
     }
 }

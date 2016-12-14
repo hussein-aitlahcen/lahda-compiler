@@ -1,6 +1,7 @@
 using Lahda.Parser;
 using Lahda.Lexer;
 using Lahda.Parser.Impl;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Lahda.Codegen
@@ -30,6 +31,7 @@ namespace Lahda.Codegen
             InitGenerate(RootNode);
         }
 
+        public void Writes(params string[] lines) => lines.ToList().ForEach(Write);
         public void Write(string line) => Output.Write(line);
         public void Debug(string message)
         {
@@ -60,10 +62,10 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Declaration:
-                    if (node is PrimitiveDeclarationNode)
+                    if (node is AddressableDeclarationNode)
                     {
-                        var primDecl = (PrimitiveDeclarationNode)node;
-                        if (primDecl.Identifier.Symbol.StackPointer > PointerIndex)
+                        var primDecl = (AddressableDeclarationNode)node;
+                        if (primDecl.Identifier.Symbol.Pointer > PointerIndex)
                         {
                             PointerIndex++;
                             Write(Pushf());
@@ -182,49 +184,79 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Declaration:
-                    if (node is PrimitiveDeclarationNode)
+                    var dcl = (AddressableDeclarationNode)node;
+                    switch (dcl.Identifier.Symbol.Type)
                     {
-                        var primDecl = (PrimitiveDeclarationNode)node;
-                        Generate(primDecl.Expression);
-                        Write(Set(primDecl.Identifier.Symbol.StackPointer));
-                    }
-                    else if (node is ArrayDeclarationNode)
-                    {
-                        var arrDecl = (ArrayDeclarationNode)node;
-                        var arrSize = ((LiteralNode)arrDecl.Identifier.IndexExpression).Value;
-                        for (var i = 0; i < arrSize; i++)
-                        {
-                            Write(Pushi());
-                            Write(MemRead());
-                            Write(Pushi(arrDecl.Identifier.Symbol.HeapPointer + i));
-                            Write(Addi());
-                            Write(Pushi());
-                            Write(MemWrite());
-                        }
+                        case ObjectType.Floating:
+                            Generate(dcl.Expression);
+                            Write
+                            (
+                                Set(dcl.Identifier.Symbol.Pointer)
+                            );
+                            break;
+
+                        case ObjectType.Pointer:
+                            Writes
+                            (
+                                Pushi(), // code size addr
+                                Dup(),
+                                MemRead(),
+                                Dup(),
+                                Itof(),
+                                Set(dcl.Identifier.Symbol.Pointer)
+                            );
+                            Generate(dcl.Expression);
+                            Writes
+                            (
+                                Ftoi(),
+                                Addi(),
+                                MemWrite()
+                            );
+                            break;
                     }
                     break;
 
+                case NodeType.Reference:
+                    var refnode = (ReferenceNode)node;
+                    Write
+                    (
+                        Pushf(65535 - refnode.Identifier.Symbol.Pointer)
+                    );
+                    break;
+
+                case NodeType.Dereference:
+                    var deref = (DereferenceNode)node;
+                    Generate(deref.Expression);
+                    Writes
+                    (
+                        Ftoi(),
+                        MemRead(),
+                        Itof()
+                    );
+                    break;
+
                 case NodeType.Assignation:
-                    if (node is PrimitiveAssignationNode)
-                    {
-                        var primAssign = (PrimitiveAssignationNode)node;
-                        Generate(primAssign.Expression);
-                        Write(Set(primAssign.Identifier.Symbol.StackPointer));
-                    }
-                    else if (node is ArrayAssignationNode)
-                    {
-                        var arrayAssign = (ArrayAssignationNode)node;
-                        Write(Pushi());
-                        Write(MemRead());
-                        Write(Pushi(arrayAssign.Identifier.Symbol.HeapPointer));
-                        Write(Addi());
-                        Generate(arrayAssign.Identifier.IndexExpression);
-                        Write(Ftoi());
-                        Write(Addi());
-                        Generate(arrayAssign.Expression);
-                        Write(Ftoi());
-                        Write(MemWrite());
-                    }
+                    var assign = (AssignationNode)node;
+                    Generate(assign.ValueExpression);
+                    Write
+                    (
+                        Set(assign.Identifier.Symbol.Pointer)
+                    );
+                    break;
+
+                case NodeType.PointerAssignation:
+                    var ptrAssign = (PointerAssignationNode)node;
+                    Generate(ptrAssign.AddressExpression);
+                    Write
+                    (
+                        Ftoi()
+                    );
+                    Generate(ptrAssign.ValueExpression);
+                    Writes
+                    (
+                        Ftoi(),
+                        MemWrite()
+                    );
                     break;
 
                 case NodeType.Literal:
@@ -233,23 +265,11 @@ namespace Lahda.Codegen
                     break;
 
                 case NodeType.Identifier:
-                    if (node is PrimitiveIdentifierNode)
-                    {
-                        Write(Get(((PrimitiveIdentifierNode)node).Symbol.StackPointer));
-                    }
-                    else if (node is ArrayIdentifierNode)
-                    {
-                        var arrayIdent = (ArrayIdentifierNode)node;
-                        Write(Pushi());
-                        Write(MemRead());
-                        Write(Pushi(arrayIdent.Symbol.HeapPointer));
-                        Write(Addi());
-                        Generate(arrayIdent.IndexExpression);
-                        Write(Ftoi());
-                        Write(Addi());
-                        Write(MemRead());
-                        Write(Itof());
-                    }
+                    var ident = (AddressableIdentifierNode)node;
+                    Write
+                    (
+                        Get(ident.Symbol.Pointer)
+                    );
                     break;
 
                 case NodeType.Print:
@@ -304,9 +324,10 @@ namespace Lahda.Codegen
                 case NodeType.Function:
                     var fun = (FunctionNode)node;
                     Write(DeclareLabel(fun.Identifier.Symbol.Name));
-                    // tree traversal 
                     for (var i = 0; i < fun.Arguments.Count; i++)
+                    {
                         Write(Pushf());
+                    }
                     PointerIndex = fun.Arguments.Count - 1;
                     PreGenerate(fun.Statement);
                     Generate(fun.Statement);
@@ -347,10 +368,12 @@ namespace Lahda.Codegen
 
         private string Prep(string function) => $"prep {function}";
         private string Call(int argCount) => $"call {argCount}";
+        private string Addf() => "add.f";
         private string Addi() => "add.i";
         private string Halt() => "halt";
         private string Ret() => "ret";
         private string MemRead() => "read";
+        private string Dup() => "dup";
         private string Ftoi() => "ftoi";
         private string Itof() => "itof";
         private string MemWrite() => "write";

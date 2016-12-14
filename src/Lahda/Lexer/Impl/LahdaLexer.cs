@@ -22,6 +22,8 @@ namespace Lahda.Lexer.Impl
             configuration.AddKeyword(KeywordType.Print, "print");
             configuration.AddKeyword(KeywordType.Return, "say");
 
+            configuration.AddOperator(OperatorType.Reference, "@");
+            configuration.AddOperator(OperatorType.Dereference, ":");
             configuration.AddOperator(OperatorType.Comma, ",");
             configuration.AddOperator(OperatorType.Increment, "++");
             configuration.AddOperator(OperatorType.Decrement, "--");
