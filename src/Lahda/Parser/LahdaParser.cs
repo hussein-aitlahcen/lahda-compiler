@@ -48,8 +48,14 @@ namespace Lahda.Parser
                 switch (token.Type)
                 {
                     case TokenType.Operator:
-                        if (Lexer.Configuration.IsOperator(OperatorType.BraceOpen, token.Value))
+                        if (IsOperatorUnconsumed(OperatorType.BraceOpen))
+                        {
                             return StatementsBlock();
+                        }
+                        else if (IsOperatorUnconsumed(OperatorType.Dereference))
+                        {
+                            return Statement(AssignationExpression);
+                        }
                         break;
 
                     case TokenType.Keyword:
@@ -360,7 +366,7 @@ namespace Lahda.Parser
         public AbstractStatementNode AssignationExpression()
         {
             AbstractExpressionNode left;
-            if (IsOperatorUnconsumed(OperatorType.Dereference))
+            if (IsOperator(OperatorType.Dereference))
             {
                 left = ArithmeticExpression();
             }
@@ -369,18 +375,18 @@ namespace Lahda.Parser
                 var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"assignation identifier not found");
                 var symbol = Symbols.Search<AbstractAddressableSymbol>(ident);
                 var identNode = new AddressableIdentifierNode(symbol);
-                if (symbol is PrimitiveVariableSymbol)
+                switch (symbol.Type)
                 {
-                    return new AssignationNode(identNode, AbstractAssign(identNode));
-                }
-                else if (symbol is ArrayVariableSymbol)
-                {
-                    var indexExpression = BracketEnclosed(ArithmeticExpression);
-                    left = new OperationNode(OperatorType.Add, identNode, indexExpression);
-                }
-                else
-                {
-                    throw new InvalidOperationException("unknow symbol assignation type");
+                    case ObjectType.Floating:
+                        return new AssignationNode(identNode, AbstractAssign(identNode));
+
+                    case ObjectType.Pointer:
+                        var indexExpression = BracketEnclosed(ArithmeticExpression);
+                        left = new OperationNode(OperatorType.Add, identNode, indexExpression);
+                        break;
+
+                    default:
+                        throw new InvalidOperationException("unknow symbol assignation type");
                 }
             }
             return new PointerAssignationNode(left, AbstractAssign(left));
