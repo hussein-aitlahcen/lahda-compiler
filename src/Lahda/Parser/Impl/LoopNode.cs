@@ -2,20 +2,23 @@ using System.Text;
 
 namespace Lahda.Parser.Impl
 {
-    public sealed class LoopNode : AbstractLoopNode
+    public sealed class LoopNode : AbstractStatementNode
     {
+        public int UniqueId { get; }
         public ConditionalNode Conditional { get; }
         public AbstractStatementNode Iteration { get; }
 
 
-        public LoopNode(AbstractExpressionNode condition, AbstractStatementNode iteration, AbstractStatementNode statement)
+        public LoopNode(int uniqueId, int uniqueCond, AbstractExpressionNode condition, AbstractStatementNode iteration, AbstractStatementNode statement)
+            : base(NodeType.Loop)
         {
-            Conditional = new ConditionalNode(condition, statement, new BlockNode(new BreakNode()));
+            UniqueId = uniqueId;
+            Conditional = new ConditionalNode(uniqueCond, condition, statement, new BlockNode(new BreakNode(UniqueId)));
             Iteration = iteration;
         }
 
-        public LoopNode(AbstractExpressionNode condition, AbstractStatementNode statement)
-            : this(condition, new BlockNode(), statement)
+        public LoopNode(int uniqueId, int uniqueCond, AbstractExpressionNode condition, AbstractStatementNode statement)
+            : this(uniqueId, uniqueCond, condition, new BlockNode(), statement)
         {
         }
 

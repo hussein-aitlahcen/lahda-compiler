@@ -33,11 +33,7 @@ namespace Lahda.Codegen
 
         public ICodeOutput Output { get; }
 
-        private ScopeLabels Labels { get; set; }
-
         private Queue<AddressableIdentifierNode> MemoryRenters { get; }
-
-        private string CurrentLabel(ScopeType type) => Labels[type].CurrentLabel;
 
         private int PointerIndex { get; set; }
 
@@ -45,7 +41,6 @@ namespace Lahda.Codegen
         {
             Output = output;
             RootNode = rootNode;
-            Labels = new ScopeLabels();
             MemoryRenters = new Queue<AddressableIdentifierNode>();
             Optimize();
         }
@@ -62,9 +57,6 @@ namespace Lahda.Codegen
             Write($"; {message.Replace("\n", "\n; ")}");
         }
         private void Optimize() => RootNode.OptimizeChilds();
-        private void PushLabel(ScopeType type) => Labels[type].Push(0);
-        private void IncrementLabel(ScopeType type) => Labels[type].Increment();
-        private int PopLabel(ScopeType type) => Labels[type].Pop();
 
         private void InitGenerate(AbstractNode node)
         {
@@ -287,7 +279,7 @@ namespace Lahda.Codegen
 
                 case NodeType.Literal:
                     var lit = (LiteralNode)node;
-                    Write($"push.f {lit.Value}");
+                    Write(Pushf(lit.Value));
                     break;
 
                 case NodeType.Identifier:
@@ -308,43 +300,37 @@ namespace Lahda.Codegen
 
                 case NodeType.Loop:
                     var loop = (LoopNode)node;
-                    IncrementLabel(ScopeType.Loop);
-                    PushLabel(ScopeType.Loop);
-                    var loopId = CurrentLabel(ScopeType.Loop);
                     {
-                        Write(DeclareLabel(BeginLoop(loopId)));
+                        Write(DeclareLabel(BeginLoop(loop.UniqueId)));
                         Generate(loop.Conditional);
-                        Write(DeclareLabel(IterationLoop(loopId)));
+                        Write(DeclareLabel(IterationLoop(loop.UniqueId)));
                         Generate(loop.Iteration);
-                        Write(Jump(BeginLoop(loopId)));
-                        Write(DeclareLabel(EndLoop(loopId)));
+                        Write(Jump(BeginLoop(loop.UniqueId)));
+                        Write(DeclareLabel(EndLoop(loop.UniqueId)));
                     }
-                    PopLabel(ScopeType.Loop);
                     break;
 
                 case NodeType.Break:
-                    Write(Jump(EndLoop(CurrentLabel(ScopeType.Loop))));
+                    var breakNode = (BreakNode)node;
+                    Write(Jump(EndLoop(breakNode.LoopId)));
                     break;
 
                 case NodeType.Continue:
-                    Write(Jump(IterationLoop(CurrentLabel(ScopeType.Loop))));
+                    var cont = (ContinueNode)node;
+                    Write(Jump(EndIf(cont.CondId)));
                     break;
 
                 case NodeType.Conditional:
                     var cond = (ConditionalNode)node;
-                    IncrementLabel(ScopeType.Conditional);
-                    PushLabel(ScopeType.Conditional);
-                    var condId = CurrentLabel(ScopeType.Conditional);
                     {
                         Generate(cond.Expression);
-                        Write(JumpFalse(Else(condId)));
+                        Write(JumpFalse(Else(cond.UniqueId)));
                         Generate(cond.TrueStatement);
-                        Write(Jump(EndIf(condId)));
-                        Write(DeclareLabel(Else(condId)));
+                        Write(Jump(EndIf(cond.UniqueId)));
+                        Write(DeclareLabel(Else(cond.UniqueId)));
                         Generate(cond.FalseStatement);
-                        Write(DeclareLabel(EndIf(condId)));
+                        Write(DeclareLabel(EndIf(cond.UniqueId)));
                     }
-                    PopLabel(ScopeType.Conditional);
                     break;
 
                 case NodeType.Function:
@@ -415,11 +401,11 @@ namespace Lahda.Codegen
         private string JumpSpec(char type, string label) => $"jump{type} {label}";
         private string JumpFalse(string label) => JumpSpec('f', label);
         private string Jump(string label) => $"jump {label}";
-        private string Else(string id) => $"else_{id}";
-        private string EndIf(string id) => $"endif_{id}";
-        private string BeginLoop(string id) => $"beginloop_{id}";
-        private string IterationLoop(string id) => $"iterloop_{id}";
-        private string EndLoop(string id) => $"endloop_{id}";
+        private string Else(int id) => $"else_{id}";
+        private string EndIf(int id) => $"endif_{id}";
+        private string BeginLoop(int id) => $"beginloop_{id}";
+        private string IterationLoop(int id) => $"iterloop_{id}";
+        private string EndLoop(int id) => $"endloop_{id}";
         private string DeclareLabel(string label) => $".{label}";
     }
 }

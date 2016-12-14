@@ -13,10 +13,17 @@ namespace Lahda.Parser
 
         public SymbolTable Symbols { get; }
 
+        private int NextLoopId;
+        private int NextCondId;
+        private Stack<int> CurrentLoop { get; }
+        private Stack<int> CurrentCond { get; }
+
         public LahdaParser(ILexer lexer)
         {
             Lexer = lexer;
             Symbols = new SymbolTable();
+            CurrentLoop = new Stack<int>();
+            CurrentCond = new Stack<int>();
         }
 
         private IToken PeekToken() => Lexer.PeekToken();
@@ -78,8 +85,8 @@ namespace Lahda.Parser
                 case KeywordType.For: return ForExpression();
                 case KeywordType.Do: return Statement(DoExpression);
                 case KeywordType.If: return ConditionalExpression();
-                case KeywordType.Break: return Statement<BreakNode>();
-                case KeywordType.Continue: return Statement<ContinueNode>();
+                case KeywordType.Break: return Statement(() => new BreakNode(CurrentLoop.Peek()));
+                case KeywordType.Continue: return Statement(() => new ContinueNode(CurrentCond.Peek()));
                 case KeywordType.Return: return Statement(ReturnExpression);
             }
             throw new InvalidOperationException($"keyword expected");
@@ -122,29 +129,38 @@ namespace Lahda.Parser
             throw new InvalidOperationException("invalid do expression");
         }
 
-        public LoopNode DoWhileExpression(AbstractStatementNode statement)
-        {
-            var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-            return new LoopNode(stopCondition, statement);
-        }
+        public LoopNode DoWhileExpression(AbstractStatementNode statement) =>
+            IdentifiedLoop(id =>
+                IdentifiedCond(condId =>
+                {
+                    var stopCondition = ParentheseEnclosed(ArithmeticExpression);
+                    return new LoopNode(id, condId, stopCondition, statement);
+                }));
 
-        public LoopNode DoUntilExpression(AbstractStatementNode statement)
-        {
-            var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-            return new LoopNode(OperationNode.Negate(stopCondition), statement);
-        }
+        public LoopNode DoUntilExpression(AbstractStatementNode statement) =>
+            IdentifiedLoop(id =>
+                IdentifiedCond(condId =>
+                {
+                    var stopCondition = ParentheseEnclosed(ArithmeticExpression);
+                    return new LoopNode(id, condId, OperationNode.Negate(stopCondition), statement);
+                }));
 
-        public LoopNode DoForeverExpression(AbstractStatementNode statement)
-        {
-            return new LoopNode(LiteralNode.True, statement);
-        }
+        public LoopNode DoForeverExpression(AbstractStatementNode statement) =>
+            IdentifiedLoop(id =>
+                IdentifiedCond(condId =>
+                {
+                    return new LoopNode(id, condId, LiteralNode.True, statement);
+                }));
 
-        public LoopNode WhileExpression()
-        {
-            var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-            var stmt = NextStatement();
-            return new LoopNode(stopCondition, stmt);
-        }
+        public LoopNode WhileExpression() =>
+            IdentifiedLoop(id =>
+
+                IdentifiedCond(condId =>
+                {
+                    var stopCondition = ParentheseEnclosed(ArithmeticExpression);
+                    var stmt = NextStatement();
+                    return new LoopNode(id, condId, stopCondition, stmt);
+                }));
 
         private class ForExpressionData
         {
@@ -170,8 +186,12 @@ namespace Lahda.Parser
                     StopCondition = Statement(ArithmeticExpression),
                     Iteration = AssignationExpression()
                 });
-                var stmt = NextStatement();
-                return new BlockNode(data.Initialization, new LoopNode(data.StopCondition, data.Iteration, stmt));
+                return IdentifiedLoop(id =>
+                    IdentifiedCond(condId =>
+                    {
+                        var stmt = NextStatement();
+                        return new BlockNode(data.Initialization, new LoopNode(id, condId, data.StopCondition, data.Iteration, stmt));
+                    }));
             });
 
         /*
@@ -186,17 +206,18 @@ namespace Lahda.Parser
                 z = 2;
             }
         */
-        public ConditionalNode ConditionalExpression()
-        {
-            var condition = ParentheseEnclosed(ArithmeticExpression);
-            var trueStmts = NextStatement();
-            AbstractStatementNode falseStmts = new BlockNode();
-            if (IsKeyword(KeywordType.Else))
+        public ConditionalNode ConditionalExpression() =>
+            IdentifiedCond(id =>
             {
-                falseStmts = NextStatement();
-            }
-            return new ConditionalNode(condition, trueStmts, falseStmts);
-        }
+                var condition = ParentheseEnclosed(ArithmeticExpression);
+                var trueStmts = NextStatement();
+                AbstractStatementNode falseStmts = new BlockNode();
+                if (IsKeyword(KeywordType.Else))
+                {
+                    falseStmts = NextStatement();
+                }
+                return new ConditionalNode(id, condition, trueStmts, falseStmts);
+            });
 
         /*
             Read a statements block (note that we call 'BraceEnclosed')
@@ -613,6 +634,21 @@ namespace Lahda.Parser
             Symbols.PushScope();
             T value = fun();
             Symbols.PopScope();
+            return value;
+        }
+
+        public T IdentifiedCond<T>(Func<int, T> fun) =>
+            UniquelyIdentified(ref NextCondId, CurrentCond, fun);
+
+        public T IdentifiedLoop<T>(Func<int, T> fun) =>
+            UniquelyIdentified(ref NextLoopId, CurrentLoop, fun);
+
+        public T UniquelyIdentified<T>(ref int id, Stack<int> stack, Func<int, T> fun)
+        {
+            id++;
+            stack.Push(id);
+            var value = fun(id);
+            stack.Pop();
             return value;
         }
 

@@ -126,7 +126,6 @@ float bmem(float required_size)
             block_addr = _next_block_addr(block_addr);
             if(block_addr == -1)
             {
-                print 1338;
                 say -1;
             }
         }
@@ -142,7 +141,8 @@ float rmem(float pointer)
     _block_fusion_right(_previous_block_addr(block_addr));
 }
 
-float len(float pointer) say _block_size(pointer - 2);
+float len(float pointer) 
+    say _block_size(pointer - 2);
 
 float display(float pointer)
 {

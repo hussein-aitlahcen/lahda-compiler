@@ -4,12 +4,14 @@ namespace Lahda.Parser.Impl
 {
     public sealed class ConditionalNode : AbstractStatementNode
     {
+        public int UniqueId { get; }
         public AbstractExpressionNode Expression { get; private set; }
         public AbstractStatementNode TrueStatement { get; private set; }
         public AbstractStatementNode FalseStatement { get; private set; }
 
-        public ConditionalNode(AbstractExpressionNode expression, AbstractStatementNode trueStatement, AbstractStatementNode falseStatement) : base(NodeType.Conditional)
+        public ConditionalNode(int uniqueId, AbstractExpressionNode expression, AbstractStatementNode trueStatement, AbstractStatementNode falseStatement) : base(NodeType.Conditional)
         {
+            UniqueId = uniqueId;
             Expression = expression;
             TrueStatement = trueStatement;
             FalseStatement = falseStatement;
