@@ -19,13 +19,15 @@ namespace ConsoleApplication
             var sources = new string[]{
                 "stdlib/stdlib.lah"
             }.Concat(args.Skip(1));
+
+            foreach (var file in args.Skip(1))
+                Console.WriteLine($"Compiling {file}");
             var multiSource = new MultiCodeSource(sources.Select(x => CodeSource.FromFile(x)).ToArray());
             Console.WriteLine(multiSource.Content);
             var parser = new LahdaParser(new LahdaLexer(new CompilationConfiguration(multiSource)));
             var output = new StringBuilderOutput();
             var codeGen = new CodeGenerator(output, parser.Root());
             codeGen.Build();
-            Console.WriteLine(output.ToString());
             if (File.Exists(outname))
                 File.Delete(outname);
             File.WriteAllText(outname, output.ToString());

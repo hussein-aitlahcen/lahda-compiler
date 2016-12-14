@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Lahda.Parser.Impl
 {
@@ -7,6 +6,10 @@ namespace Lahda.Parser.Impl
     {
         public FunctionIdentifierNode Target { get; }
         public List<AbstractExpressionNode> Parameters { get; private set; }
+
+        public CallNode(FunctionIdentifierNode target, params AbstractExpressionNode[] parameters) : this(target, new List<AbstractExpressionNode>(parameters))
+        {
+        }
 
         public CallNode(FunctionIdentifierNode target, List<AbstractExpressionNode> parameters) : base(NodeType.Call)
         {

@@ -1,5 +1,3 @@
-using Lahda.Common;
-
 namespace Lahda.Parser
 {
     public sealed class AddressableDeclarationNode : AbstractDeclarationNode

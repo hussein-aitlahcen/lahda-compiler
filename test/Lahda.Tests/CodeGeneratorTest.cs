@@ -19,7 +19,6 @@ namespace Lahda.Tests
             var output = new StringBuilderOutput();
             var codeGen = new CodeGenerator(output, parser.Root());
             codeGen.Build();
-            Console.WriteLine(output.ToString());
             var path = $"test_{i}.s";
             if (File.Exists(path))
                 File.Delete(path);

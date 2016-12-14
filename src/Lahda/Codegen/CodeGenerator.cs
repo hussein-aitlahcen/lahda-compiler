@@ -1,18 +1,41 @@
 using Lahda.Parser;
-using Lahda.Lexer;
 using Lahda.Parser.Impl;
 using System.Collections.Generic;
 using System.Linq;
+using Lahda.Common;
 
 namespace Lahda.Codegen
 {
     public sealed class CodeGenerator
     {
+        public static class Builtin
+        {
+            private static AbstractStatementNode DropReturn(AbstractStatementNode node) => new BlockNode
+            (
+                node,
+                new DropNode()
+            );
+
+            public static AbstractStatementNode BorrowMemory(AbstractExpressionNode size) => new CallNode
+            (
+                new FunctionIdentifierNode(new FunctionSymbol("bmem")),
+                size
+            );
+
+            public static AbstractStatementNode RecoverMemory(AddressableIdentifierNode ident) => DropReturn(new CallNode
+            (
+                new FunctionIdentifierNode(new FunctionSymbol("rmem")),
+                ident
+            ));
+        }
+
         public AbstractNode RootNode { get; }
 
         public ICodeOutput Output { get; }
 
         private ScopeLabels Labels { get; set; }
+
+        private Queue<AddressableIdentifierNode> MemoryRenters { get; }
 
         private string CurrentLabel(ScopeType type) => Labels[type].CurrentLabel;
 
@@ -23,6 +46,7 @@ namespace Lahda.Codegen
             Output = output;
             RootNode = rootNode;
             Labels = new ScopeLabels();
+            MemoryRenters = new Queue<AddressableIdentifierNode>();
             Optimize();
         }
 
@@ -207,22 +231,9 @@ namespace Lahda.Codegen
                             break;
 
                         case ObjectType.Pointer:
-                            Writes
-                            (
-                                Pushi(), // code size addr
-                                Dup(),
-                                MemRead(),
-                                Dup(),
-                                Itof(),
-                                Set(dcl.Identifier.Symbol.Pointer)
-                            );
-                            Generate(dcl.Expression);
-                            Writes
-                            (
-                                Ftoi(),
-                                Addi(),
-                                MemWrite()
-                            );
+                            Generate(Builtin.BorrowMemory(dcl.Expression));
+                            Write(Set(dcl.Identifier.Symbol.Pointer));
+                            MemoryRenters.Enqueue(dcl.Identifier);
                             break;
                     }
                     break;
@@ -346,6 +357,10 @@ namespace Lahda.Codegen
                     PointerIndex = fun.Arguments.Count - 1;
                     PreGenerate(fun.Statement);
                     Generate(fun.Statement);
+                    while (MemoryRenters.Count > 0)
+                    {
+                        Generate(Builtin.RecoverMemory(MemoryRenters.Dequeue()));
+                    }
                     if (fun.Identifier.Symbol.Name != "start")
                     {
                         Write(Pushf());
