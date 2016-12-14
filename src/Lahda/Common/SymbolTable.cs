@@ -58,6 +58,10 @@ namespace Lahda.Common
             {
                 throw new InvalidOperationException($"unknow symbol {identifier}");
             }
+            else if (!(symbol is T))
+            {
+                throw new InvalidOperationException($"wrong symbol type {identifier}");
+            }
             return (T)symbol;
         }
     }

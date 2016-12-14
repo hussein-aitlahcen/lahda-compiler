@@ -21,7 +21,7 @@ namespace Lahda
 
         public string EndOfStatement() => ";";
 
-        public Regex BuildIdentifierRegex() => R("^([A-Za-z][A-Za-z0-9_]*)$");
+        public Regex BuildIdentifierRegex() => R("^([A-Za-z_][A-Za-z0-9_]*)$");
 
         public Regex BuildFloatingRegex() => R("^(((([0-9]+\\.[0-9]*)|([0-9]*\\.[0-9]+))([Ee][+-]?[0-9]+)?)|([0-9]+([Ee][+-]?[0-9]+)))$");
 

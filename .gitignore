@@ -4,6 +4,7 @@
 # Both executables 
 MSM/msm
 MSM/msm.exe
+testlib/
 
 # Generated assembly code
 *.s

@@ -90,15 +90,15 @@ namespace Lahda.Codegen
 
         private void Generate(AbstractNode node)
         {
-            var debugNodeTypesIgnore = new[]
+            var debugNodeTypes = new NodeType[]
             {
-                NodeType.Block,
+                /*NodeType.Block,
                 NodeType.Literal,
                 NodeType.Identifier,
                 NodeType.Loop,
-                NodeType.Operation,
+                NodeType.Operation,*/
             };
-            if (!debugNodeTypesIgnore.Contains(node.Type))
+            if (debugNodeTypes.Contains(node.Type))
                 Debug(node.ToString());
             switch (node.Type)
             {
@@ -118,11 +118,22 @@ namespace Lahda.Codegen
                         OperatorType.OrElse
                     };
 
+                    var outputIntegerOperations = new[]
+                    {
+                        OperatorType.Equals,
+                        OperatorType.Greater,
+                        OperatorType.NotGreater,
+                        OperatorType.Less,
+                        OperatorType.NotLess,
+                        OperatorType.NotEquals
+                    };
+
                     /*
                         We accept floating only, sometimes we need integer (logical and/or)
                         In this case, we cast the floating into an integer and cast back the result into a floating one.
                     */
                     var requireInteger = integerOperations.Contains(operation.Operator);
+                    var requireOutputTransform = outputIntegerOperations.Contains(operation.Operator);
 
                     Generate(operation.LeftOperand);
                     if (requireInteger)
@@ -179,7 +190,7 @@ namespace Lahda.Codegen
                             // TODO: pow
                             break;
                     }
-                    if (requireInteger)
+                    if (requireInteger || requireOutputTransform)
                         Write("itof");
                     break;
 
@@ -220,7 +231,7 @@ namespace Lahda.Codegen
                     var refnode = (ReferenceNode)node;
                     Write
                     (
-                        Pushf(65535 - refnode.Identifier.Symbol.Pointer)
+                        Pushf(refnode.Identifier.Symbol.Pointer)
                     );
                     break;
 
@@ -242,6 +253,10 @@ namespace Lahda.Codegen
                     (
                         Set(assign.Identifier.Symbol.Pointer)
                     );
+                    break;
+
+                case NodeType.Drop:
+                    Write(Drop());
                     break;
 
                 case NodeType.PointerAssignation:
@@ -373,6 +388,7 @@ namespace Lahda.Codegen
         private string Halt() => "halt";
         private string Ret() => "ret";
         private string MemRead() => "read";
+        private string Drop() => "drop";
         private string Dup() => "dup";
         private string Ftoi() => "ftoi";
         private string Itof() => "itof";

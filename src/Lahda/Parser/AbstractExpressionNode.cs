@@ -1,6 +1,6 @@
 namespace Lahda.Parser
 {
-    public abstract class AbstractExpressionNode : AbstractNode
+    public abstract class AbstractExpressionNode : AbstractStatementNode
     {
         public AbstractExpressionNode(NodeType type) : base(type)
         {

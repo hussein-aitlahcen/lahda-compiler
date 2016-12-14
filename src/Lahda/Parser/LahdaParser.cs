@@ -373,20 +373,36 @@ namespace Lahda.Parser
             else
             {
                 var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"assignation identifier not found");
-                var symbol = Symbols.Search<AbstractAddressableSymbol>(ident);
-                var identNode = new AddressableIdentifierNode(symbol);
-                switch (symbol.Type)
+                var symbol = Symbols.Search<AbstractSymbol>(ident);
+                if (symbol is AbstractAddressableSymbol)
                 {
-                    case ObjectType.Floating:
-                        return new AssignationNode(identNode, AbstractAssign(identNode));
+                    var addressableSymbol = (AbstractAddressableSymbol)symbol;
+                    var identNode = new AddressableIdentifierNode(addressableSymbol);
+                    switch (symbol.Type)
+                    {
+                        case ObjectType.Floating:
+                            return new AssignationNode(identNode, AbstractAssign(identNode));
 
-                    case ObjectType.Pointer:
-                        var indexExpression = BracketEnclosed(ArithmeticExpression);
-                        left = new OperationNode(OperatorType.Add, identNode, indexExpression);
-                        break;
+                        case ObjectType.Pointer:
+                            var indexExpression = BracketEnclosed(ArithmeticExpression);
+                            left = new OperationNode(OperatorType.Add, identNode, indexExpression);
+                            break;
 
-                    default:
-                        throw new InvalidOperationException("unknow symbol assignation type");
+                        default:
+                            throw new InvalidOperationException("unknow symbol assignation type");
+                    }
+                }
+                else if (symbol is FunctionSymbol)
+                {
+                    return new BlockNode
+                    (
+                        CallExpression((FunctionSymbol)symbol),
+                        new DropNode()
+                    );
+                }
+                else
+                {
+                    throw new InvalidOperationException("assignation or call expression expected");
                 }
             }
             return new PointerAssignationNode(left, AbstractAssign(left));
@@ -515,7 +531,7 @@ namespace Lahda.Parser
 
                     if (!(symbol is AbstractAddressableSymbol))
                     {
-                        throw new InvalidOperationException($"wrong symbol type for atomic identifier in primitive {symbol.Type}");
+                        throw new InvalidOperationException($"wrong symbol type for atomic identifier in primitive {symbol.Name} {symbol.Type}");
                     }
 
                     var arraySymbol = symbol as ArrayVariableSymbol;
