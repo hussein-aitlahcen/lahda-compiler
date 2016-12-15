@@ -4,8 +4,14 @@ float _mem_is_init()
 float _mem_set_init()
     :(:0) = 1;
 
+float _block_number()
+    say :((:0) + 1);
+
+float _block_number_set(float value)
+    :((:0) + 1) = value;
+
 float _first_block_addr()
-    say (:0) + 1;
+    say (:0) + 2;
 
 float _mem_size()
     say 50000 - _first_block_addr();
@@ -130,6 +136,7 @@ float bmem(float required_size)
             }
         }
     }
+    _block_number_set(_block_number() + 1);
     say free_addr + 2;
 }
 
@@ -139,6 +146,7 @@ float rmem(float pointer)
     _block_free_set(block_addr, true);
     _block_fusion_right(block_addr);
     _block_fusion_right(_previous_block_addr(block_addr));
+    _block_number_set(_block_number() - 1);
 }
 
 float len(float pointer) 
