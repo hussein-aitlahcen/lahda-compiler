@@ -8,32 +8,9 @@ namespace Lahda.Codegen
 {
     public sealed class CodeGenerator
     {
-        public static class Builtin
-        {
-            private static AbstractStatementNode DropReturn(AbstractStatementNode node) => new BlockNode
-            (
-                node,
-                new DropNode()
-            );
-
-            public static AbstractStatementNode BorrowMemory(AbstractExpressionNode size) => new CallNode
-            (
-                new FunctionIdentifierNode(new FunctionSymbol("bmem")),
-                size
-            );
-
-            public static AbstractStatementNode RecoverMemory(AddressableIdentifierNode ident) => DropReturn(new CallNode
-            (
-                new FunctionIdentifierNode(new FunctionSymbol("rmem")),
-                ident
-            ));
-        }
-
         public AbstractNode RootNode { get; }
 
         public ICodeOutput Output { get; }
-
-        private Queue<AddressableIdentifierNode> MemoryRenters { get; }
 
         private int PointerIndex { get; set; }
 
@@ -41,7 +18,6 @@ namespace Lahda.Codegen
         {
             Output = output;
             RootNode = rootNode;
-            MemoryRenters = new Queue<AddressableIdentifierNode>();
             Optimize();
         }
 
@@ -201,9 +177,12 @@ namespace Lahda.Codegen
                             break;
                         case OperatorType.Mod:
                             // TODO: modulo
+
                             break;
                         case OperatorType.Pow:
-                            // TODO: pow
+                            Write(Drop());
+                            Write(Drop());
+                            Generate(BuiltinFunctions.Pow(operation.LeftOperand, operation.RightOperand));
                             break;
                     }
                     if (requireInteger || requireOutputTransform)
@@ -223,9 +202,61 @@ namespace Lahda.Codegen
                             break;
 
                         case ObjectType.Pointer:
-                            Generate(Builtin.BorrowMemory(dcl.Expression));
+                            var indexExpressions = ((MultiExpressionNode)dcl.Expression).Expressions;
+                            indexExpressions.Reverse();
+                            AbstractExpressionNode finalExpression = LiteralNode.One;
+                            for (var i = 0; i < indexExpressions.Count - 1; i++)
+                            {
+                                finalExpression = new OperationNode
+                                (
+                                    OperatorType.Mul,
+                                    new OperationNode
+                                    (
+                                        OperatorType.Add,
+                                        LiteralNode.One,
+                                        indexExpressions[i]
+                                    ),
+                                    finalExpression
+                                );
+                            }
+                            finalExpression = new OperationNode
+                            (
+                                OperatorType.Mul,
+                                indexExpressions.Last(),
+                                finalExpression
+                            );
+                            Generate(BuiltinFunctions.BorrowMemory(finalExpression));
                             Write(Set(dcl.Identifier.Symbol.Pointer));
-                            MemoryRenters.Enqueue(dcl.Identifier);
+                            var tempVar = new AddressableIdentifierNode(new PrimitiveVariableSymbol("", PointerIndex + 1));
+                            Write(Pushf());
+                            Generate(BuiltinFunctions.BorrowMemory(new LiteralNode(indexExpressions.Count)));
+                            Write(Set(tempVar.Symbol.Pointer));
+                            indexExpressions.Reverse();
+                            for (var i = 0; i < indexExpressions.Count; i++)
+                            {
+                                Generate
+                                (
+                                    new PointerAssignationNode
+                                    (
+                                        new OperationNode
+                                        (
+                                            OperatorType.Add,
+                                            tempVar,
+                                            new LiteralNode(i)
+                                        ),
+                                        indexExpressions[i]
+                                    )
+                                );
+                            }
+                            /*
+                                    var a = bmem(6);
+                                    var b = bmem(2);
+                                    :b = 2;
+                                    :b + 1 = 2;
+                                    init_array(a, b, 2);
+                            */
+                            Generate(BuiltinFunctions.InitArray(dcl.Identifier, tempVar, new LiteralNode(indexExpressions.Count)));
+                            Write(Drop());
                             break;
                     }
                     break;
@@ -333,20 +364,18 @@ namespace Lahda.Codegen
                     }
                     break;
 
+                case NodeType.MultiExpression:
+                    var multi = (MultiExpressionNode)node;
+                    foreach (var expression in multi.Expressions)
+                        Generate(expression);
+                    break;
+
                 case NodeType.Function:
                     var fun = (FunctionNode)node;
                     Write(DeclareLabel(fun.Identifier.Symbol.Name));
-                    for (var i = 0; i < fun.Arguments.Count; i++)
-                    {
-                        Write(Pushf());
-                    }
                     PointerIndex = fun.Arguments.Count - 1;
                     PreGenerate(fun.Statement);
                     Generate(fun.Statement);
-                    while (MemoryRenters.Count > 0)
-                    {
-                        Generate(Builtin.RecoverMemory(MemoryRenters.Dequeue()));
-                    }
                     if (fun.Identifier.Symbol.Name != "start")
                     {
                         Write(Pushf());

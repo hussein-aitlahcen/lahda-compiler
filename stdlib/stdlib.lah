@@ -149,8 +149,24 @@ float rmem(float pointer)
     _block_number_set(_block_number() - 1);
 }
 
-float len(float pointer) 
+float size(float pointer) 
     say _block_size(pointer - 2);
+
+float init_array(float pointer, float dim_pointer, float dim_pointer_size)
+{
+    if(dim_pointer_size == 1)
+        say :dim_pointer;
+        
+    var current_dim = :dim_pointer;
+    var child_size = 0;
+    for(var i = 0; i < current_dim; i++)
+    {
+        var child_pointer = pointer + current_dim + (i * child_size);
+        child_size = init_array(child_pointer, dim_pointer + 1, dim_pointer_size - 1);
+        :pointer + i = child_pointer;
+    }
+    say current_dim * (child_size + 1);
+}
 
 float display(float pointer)
 {
@@ -160,4 +176,24 @@ float display(float pointer)
     {
         print :pointer + i;
     }
+}
+
+float pow(float a, float b)
+{
+    if(b == 0)
+    {
+        say 1;
+    }
+    
+    if(b < 0)
+    {
+        say 1 / pow(a, -b);
+    }
+
+    while(b > 0)
+    {
+        a *= a;
+        b--;
+    }
+    say a;
 }

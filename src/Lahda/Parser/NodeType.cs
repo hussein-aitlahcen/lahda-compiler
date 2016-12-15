@@ -5,6 +5,7 @@ namespace Lahda.Parser
         None,
         Root,
         Drop,
+        MultiExpression,
         Literal,
         Return,
         Operation,

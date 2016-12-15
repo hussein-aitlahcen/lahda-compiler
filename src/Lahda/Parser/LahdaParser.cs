@@ -39,7 +39,7 @@ namespace Lahda.Parser
 
         public AbstractStatementNode Root()
         {
-            var funcs = new List<FunctionNode>();
+            var funcs = new List<AbstractNode>();
             while (PeekToken().Type != TokenType.EOF)
             {
                 funcs.Add(FunctionExpression());
@@ -117,19 +117,20 @@ namespace Lahda.Parser
             }
             forever; 
         */
-        public LoopNode DoExpression() =>
-            IdentifiedLoop(loopId =>
-                IdentifiedCond(condId =>
-                {
-                    var stmt = NextStatement();
-                    switch (GetKeywordType())
+        public AbstractStatementNode DoExpression() =>
+            Scoped(() =>
+                IdentifiedLoop(loopId =>
+                    IdentifiedCond(condId =>
                     {
-                        case KeywordType.While: return DoWhileExpression(loopId, condId, stmt);
-                        case KeywordType.Until: return DoUntilExpression(loopId, condId, stmt);
-                        case KeywordType.Forever: return DoForeverExpression(loopId, condId, stmt);
-                        default: throw new InvalidOperationException("invalid do expression");
-                    }
-                }));
+                        var stmt = new BlockNode(NextStatement(), Symbols.CurrentScope.ReleaseStatements);
+                        switch (GetKeywordType())
+                        {
+                            case KeywordType.While: return DoWhileExpression(loopId, condId, stmt);
+                            case KeywordType.Until: return DoUntilExpression(loopId, condId, stmt);
+                            case KeywordType.Forever: return DoForeverExpression(loopId, condId, stmt);
+                            default: throw new InvalidOperationException("invalid do expression");
+                        }
+                    })));
 
         public LoopNode DoWhileExpression(int loopId, int condId, AbstractStatementNode statement)
         {
@@ -147,15 +148,15 @@ namespace Lahda.Parser
             new LoopNode(loopId, condId, LiteralNode.True, statement);
 
 
-        public LoopNode WhileExpression() =>
-            IdentifiedLoop(id =>
-
-                IdentifiedCond(condId =>
-                {
-                    var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-                    var stmt = NextStatement();
-                    return new LoopNode(id, condId, stopCondition, stmt);
-                }));
+        public AbstractStatementNode WhileExpression() =>
+            Scoped(() =>
+                IdentifiedLoop(id =>
+                    IdentifiedCond(condId =>
+                    {
+                        var stopCondition = ParentheseEnclosed(ArithmeticExpression);
+                        var stmt = new BlockNode(NextStatement(), Symbols.CurrentScope.ReleaseStatements);
+                        return new LoopNode(id, condId, stopCondition, stmt);
+                    })));
 
         private class ForExpressionData
         {
@@ -172,7 +173,7 @@ namespace Lahda.Parser
                 x = x + 2;
             }
         */
-        public BlockNode ForExpression() =>
+        public AbstractStatementNode ForExpression() =>
             Scoped(() =>
             {
                 var data = ParentheseEnclosed(() => new ForExpressionData()
@@ -181,11 +182,26 @@ namespace Lahda.Parser
                     StopCondition = Statement(ArithmeticExpression),
                     Iteration = AssignationExpression()
                 });
-                return IdentifiedLoop(id =>
+                return IdentifiedLoop(loopId =>
                     IdentifiedCond(condId =>
                     {
                         var stmt = NextStatement();
-                        return new BlockNode(data.Initialization, new LoopNode(id, condId, data.StopCondition, data.Iteration, stmt));
+                        return new BlockNode
+                        (
+                            data.Initialization, 
+                            new LoopNode
+                            (
+                                loopId, 
+                                condId, 
+                                data.StopCondition, 
+                                data.Iteration, 
+                                new BlockNode
+                                (
+                                    stmt, 
+                                    Symbols.CurrentScope.ReleaseStatements
+                                )
+                            )
+                        );
                     }));
             });
 
@@ -226,16 +242,17 @@ namespace Lahda.Parser
                 print x;
             }
         */
-        public BlockNode StatementsBlock() =>
-            Scoped(() => BraceEnclosed(() =>
-            {
-                var statements = new List<AbstractStatementNode>();
-                while (!IsOperatorUnconsumed(OperatorType.BraceClose))
+        public AbstractStatementNode StatementsBlock() =>
+            Scoped(() =>
+                BraceEnclosed(() =>
                 {
-                    statements.Add(NextStatement());
-                }
-                return new BlockNode(statements);
-            }));
+                    var statements = new List<AbstractStatementNode>();
+                    while (!IsOperatorUnconsumed(OperatorType.BraceClose))
+                    {
+                        statements.Add(NextStatement());
+                    }
+                    return new BlockNode(new BlockNode(statements), Symbols.CurrentScope.ReleaseStatements);
+                }));
 
         public PrintNode PrintExpression() => new PrintNode(ArithmeticExpression());
 
@@ -255,7 +272,7 @@ namespace Lahda.Parser
                 return new CallNode(new FunctionIdentifierNode(symbol), expressions);
             });
 
-        public FunctionNode FunctionExpression()
+        public AbstractNode FunctionExpression()
         {
             var returnType = GetObjectType(GetKeywordType());
             var symb = DefineFunctionSymbol();
@@ -285,7 +302,7 @@ namespace Lahda.Parser
                     return args;
                 });
                 symb.ParameterCount = arguments.Count;
-                var stmt = NextStatement();
+                var stmt = new BlockNode(NextStatement(), Symbols.CurrentScope.ReleaseStatements);
                 return new FunctionNode(returnType, new FunctionIdentifierNode(symb), arguments, stmt);
             });
         }
@@ -305,9 +322,13 @@ namespace Lahda.Parser
             var ident = GetTokenValueOrThrow<string>(TokenType.Identifier, $"declaration identifier not found");
             if (IsOperatorUnconsumed(OperatorType.BracketOpen))
             {
-                var indexExpression = BracketEnclosed(ArithmeticExpression);
                 var arrSymbol = Symbols.DefineSymbol(new ArrayVariableSymbol(ident));
-                return new AddressableDeclarationNode(new AddressableIdentifierNode(arrSymbol), indexExpression);
+                var indexExpressions = new List<AbstractExpressionNode>();
+                while(IsOperatorUnconsumed(OperatorType.BracketOpen))
+                {
+                    indexExpressions.Add(BracketEnclosed(ArithmeticExpression));
+                }
+                return new AddressableDeclarationNode(new AddressableIdentifierNode(arrSymbol), new MultiExpressionNode(indexExpressions));
             }
             if (!IsOperator(OperatorType.Assign))
             {
@@ -394,18 +415,20 @@ namespace Lahda.Parser
                 {
                     var addressableSymbol = (AbstractAddressableSymbol)symbol;
                     var identNode = new AddressableIdentifierNode(addressableSymbol);
-                    switch (symbol.Type)
+                    if (IsOperatorUnconsumed(OperatorType.BracketOpen))
                     {
-                        case ObjectType.Floating:
-                            return new AssignationNode(identNode, AbstractAssign(identNode));
-
-                        case ObjectType.Pointer:
-                            var indexExpression = BracketEnclosed(ArithmeticExpression);
-                            left = new OperationNode(OperatorType.Add, identNode, indexExpression);
-                            break;
-
-                        default:
-                            throw new InvalidOperationException("unknow symbol assignation type");
+                        var indexExpression = BracketEnclosed(ArithmeticExpression);
+                        left = new OperationNode(OperatorType.Add, identNode, indexExpression);
+                        // recursive ident[a][b][c]...
+                        while (IsOperatorUnconsumed(OperatorType.BracketOpen))
+                        {
+                            indexExpression = BracketEnclosed(ArithmeticExpression);
+                            left = new OperationNode(OperatorType.Add, new DereferenceNode(left), indexExpression);
+                        }
+                    }
+                    else
+                    {
+                        return new AssignationNode(identNode, AbstractAssign(identNode));
                     }
                 }
                 else if (symbol is FunctionSymbol)
@@ -425,7 +448,8 @@ namespace Lahda.Parser
         }
 
         // The arithmetic expression starts at the higher level, the Logical Or.
-        public AbstractExpressionNode ArithmeticExpression() => ArithmeticOperation(ArithmeticLevel.LogicalOr)();
+        public AbstractExpressionNode ArithmeticExpression() =>
+            ArithmeticOperation(ArithmeticLevel.LogicalOr)();
 
         // Recursively call the lower arithmetic stage until a primitive
         private Func<AbstractExpressionNode> ArithmeticOperation(ArithmeticLevel level)
@@ -452,6 +476,7 @@ namespace Lahda.Parser
             {
                 case ArithmeticLevel.Divisible:
                     yield return OperatorType.Div;
+                    yield return OperatorType.Pow;
                     break;
 
                 case ArithmeticLevel.Multiplicative:
@@ -550,13 +575,21 @@ namespace Lahda.Parser
                         throw new InvalidOperationException($"wrong symbol type for atomic identifier in primitive {symbol.Name} {symbol.Type}");
                     }
 
-                    var arraySymbol = symbol as ArrayVariableSymbol;
-                    if (arraySymbol != null)
+                    // check for pointer index access
+                    var addressableSymbol = symbol as AbstractAddressableSymbol;
+                    if (addressableSymbol != null)
                     {
                         if (IsOperatorUnconsumed(OperatorType.BracketOpen))
                         {
                             var indexExpression = BracketEnclosed(ArithmeticExpression);
-                            return new DereferenceNode(new OperationNode(OperatorType.Add, new AddressableIdentifierNode(arraySymbol), indexExpression));
+                            var dereferencedNode = new DereferenceNode(new OperationNode(OperatorType.Add, new AddressableIdentifierNode(addressableSymbol), indexExpression));
+                            // recursive a[x][y][z]...
+                            while (IsOperatorUnconsumed(OperatorType.BracketOpen))
+                            {
+                                indexExpression = BracketEnclosed(ArithmeticExpression);
+                                dereferencedNode = new DereferenceNode(new OperationNode(OperatorType.Add, dereferencedNode, indexExpression));
+                            }
+                            return dereferencedNode;
                         }
                     }
 
@@ -624,7 +657,8 @@ namespace Lahda.Parser
         /*
             Execute the given function in a new scope.
         */
-        public T Scoped<T>(Func<T> fun)
+        public AbstractStatementNode Scoped<T>(Func<T> fun)
+            where T : AbstractStatementNode
         {
             Symbols.PushScope();
             T value = fun();

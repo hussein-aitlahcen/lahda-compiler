@@ -4,9 +4,9 @@ namespace Lahda.Parser.Impl
 {
     public sealed class RootNode : AbstractStatementNode
     {
-        public List<FunctionNode> Functions { get; }
+        public List<AbstractNode> Functions { get; }
 
-        public RootNode(List<FunctionNode> functions) : base(NodeType.Root)
+        public RootNode(List<AbstractNode> functions) : base(NodeType.Root)
         {
             Functions = functions;
         }
