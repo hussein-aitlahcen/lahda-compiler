@@ -37,7 +37,7 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 
 * **Floating** = `(((([0-9]+\\.[0-9]*)|([0-9]*\\.[0-9]+))([Ee][+-]?[0-9]+)?)|([0-9]+([Ee][+-]?[0-9]+)))`
 * **Bool** = *`true`* | *`false`*
-* **Primitive** = Floating | Bool | Identifier | `-` Primitive | *`!`* Primitive | *`(`* Expression *`)`*
+* **Primitive** = Floating | Bool | Identifier | `-` Primitive | *`!`* Primitive | *`(`* Expression *`)`* | *`:`* Expression
 * **Divisible** = Primitive (*`/`* Divisible)?
 * **Multiplicative** = Divisible (`*` Multiplicative)?
 * **Additive** = Multiplicative ((*`+`* | *`-`*) Additive)?
@@ -54,7 +54,7 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 * **Identifier** = `([A-Za-z][A-Za-z0-9_]*)`
 * **BinaryOperator** = *`+=`* | *`-=`* | *`/=`* | *`%=`* | *`^=`* | *`=`* | `*=`
 * **UnaryOperator** = *`++`* | *`--`*
-* **Assignation** = Identifier (BinaryOperator Expression | UnaryOperator)
+* **Assignation** = (Identifier | *`:`* Expression ) (BinaryOperator Expression | UnaryOperator)
 * **Declaration** = *`var`* Identifier *`=`* Expression
 * **LoopControl** = `continue` | `break`
 * **Inline** = (Assignation | Declaration | LoopControl) StatementEnd
@@ -65,118 +65,164 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 * **ForLoop** = *`for`* *`(`* Declaration StatemendEnd Expression StatemendEnd Assignation *`)`* Statement
 * **Loop** = WhileLoop | DoLoop | ForLoop
 * **Statement** = Inline | Loop | Block | StatementEnd
+* **Function** = *`float`* Identifier *`(`* (*`float`* Identifier *`,`*)* *`)`*
+* **Root** = Function*
 
 ### Example
 
+The Alloc/Free builtin functions.
+
+You can notice that the *`:`* is the equivalent of *`*`* in C, dereferencing a pointer.
+
 ```javascript
-float fibo(float n) 
-  if(n <= 2) 
-    say 1; 
-  else 
-    say fibo(n - 1) + fibo(n - 2); 
+float _mem_is_init()
+    say :(:0);
 
-float start() 
-  for(var i = 0; i < 10; i++) 
-    print fibo(i + 1);
-```
+float _mem_set_init()
+    :(:0) = 1;
 
-#### Generated code
+float _block_number()
+    say :((:0) + 1);
 
-```assembly
-; ROOT
-; FUN fibo: Floating (n)
-;  IF (n NotGreater 2) THEN
-; 	RET 1
-; ELSE
-; 	RET (CALL fibo((n Sub 1)) Add CALL fibo((n Sub 2)))
-; ENDIF
-; 
-.fibo
-push.f 0
-; IF (n NotGreater 2) THEN
-; 	RET 1
-; ELSE
-; 	RET (CALL fibo((n Sub 1)) Add CALL fibo((n Sub 2)))
-; ENDIF
-; 
-get 0
-push.f 2
-cmple.f
-jumpf else_0_1
-; RET 1
-push.f 1
-ret
-jump endif_0_1
-.else_0_1
-; RET (CALL fibo((n Sub 1)) Add CALL fibo((n Sub 2)))
-; CALL fibo((n Sub 1))
-prep fibo
-get 0
-push.f 1
-sub.f
-call 1
-; CALL fibo((n Sub 2))
-prep fibo
-get 0
-push.f 2
-sub.f
-call 1
-add.f
-ret
-.endif_0_1
-push.f 0
-ret
-; FUN start: Floating ()
-;  DECL i = 0
-; WHILE
-; 	IF (i Less 10) THEN
-; 		PRINT CALL fibo((i Add 1))
-; 	ELSE
-; 		BREAK
-; 
-; 	ENDIF
-; 
-; 
-; 
-.start
-push.f 0
-; DECL i = 0
-push.f 0
-set 0
-.beginloop_0_1
-; IF (i Less 10) THEN
-; 	PRINT CALL fibo((i Add 1))
-; ELSE
-; 	BREAK
-; 
-; ENDIF
-; 
-get 0
-push.f 10
-cmplt.f
-jumpf else_0_2
-; PRINT CALL fibo((i Add 1))
-; CALL fibo((i Add 1))
-prep fibo
-get 0
-push.f 1
-add.f
-call 1
-out.f
-push.i 10
-out.c
-jump endif_0_2
-.else_0_2
-; BREAK
-jump endloop_0_1
-.endif_0_2
-.iterloop_0_1
-; ASSIGN i = (i Add 1)
-get 0
-push.f 1
-add.f
-set 0
-jump beginloop_0_1
-.endloop_0_1
-halt
+float _block_number_set(float value)
+    :((:0) + 1) = value;
+
+float _first_block_addr()
+    say (:0) + 2;
+
+float _mem_size()
+    say 50000 - _first_block_addr();
+
+float _block_size(float block_addr)
+    say :block_addr;
+
+float _block_size_set(float block_addr, float size)
+    :block_addr = size;
+
+float _block_free(float block_addr)
+    say :block_addr + 1;
+
+float _block_free_set(float block_addr, float free)
+    :block_addr + 1 = free;
+
+float _next_block_addr(float block_addr) 
+{
+    var block_size = _block_size(block_addr);
+    var block_size_end = block_addr + block_size + 1;
+    if(block_size_end  == _mem_size())
+    {
+        say -1;
+    }
+
+    say block_size_end + 1;
+}
+
+float _previous_block_addr(float block_addr) 
+{
+    var first_block_addr = _first_block_addr();
+    if(block_addr <= first_block_addr)
+    {
+        say -1;
+    }
+
+    var previous_block_addr = first_block_addr;
+    var current_block_addr = _next_block_addr(previous_block_addr);
+    while(current_block_addr < block_addr)
+    {
+        previous_block_addr = current_block_addr;
+        current_block_addr = _next_block_addr(previous_block_addr);
+    }
+    say previous_block_addr;
+}
+
+float _next_block_create(float block_addr, float initial_size)
+{
+    var next_block_addr = _next_block_addr(block_addr);
+    if(next_block_addr != -1)
+    {
+        var block_size = _block_size(block_addr);
+        var block_total_size = block_size + 2;
+        var next_block_size = initial_size - block_total_size;
+        _block_size_set(next_block_addr, next_block_size);
+        _block_free_set(next_block_addr, true);
+    }
+}
+
+float _block_fusion_right(float block_addr)
+{
+    if(block_addr < _first_block_addr())
+    {
+        say -1;
+    }
+
+    var block_free = _block_free(block_addr);
+    var block_size = _block_size(block_addr);
+    if(block_free)
+    {
+        var next_block_addr = _next_block_addr(block_addr);
+        if(next_block_addr != -1)
+        {
+            var next_block_free = _block_free(next_block_addr);
+            var next_block_size = _block_size(next_block_addr);
+            if(next_block_free)
+            {
+                var block_fusion_size = block_size + next_block_size + 2;
+                _block_size_set(block_addr, block_fusion_size);
+            }
+        }
+    }
+}
+
+float _init_mem()
+{
+    if(!_mem_is_init())
+    {
+        _mem_set_init();
+        var block_addr = _first_block_addr();
+        _block_size_set(block_addr, _mem_size() - 2);
+        _block_free_set(block_addr, true);
+    }
+}
+
+float bmem(float required_size)
+{
+    _init_mem();
+
+    var block_addr = _first_block_addr();
+    var free_addr = -1;
+    while(free_addr == -1) 
+    {
+        var block_size = _block_size(block_addr);
+        var block_free = _block_free(block_addr);
+        if(block_size >= required_size && block_free)
+        {
+            free_addr = block_addr;
+            _block_size_set(block_addr, required_size);
+            _block_free_set(block_addr, false);
+            if(block_size > required_size)
+            {
+                _next_block_create(block_addr, block_size);
+            }
+        }
+        else 
+        {
+            block_addr = _next_block_addr(block_addr);
+            if(block_addr == -1)
+            {
+                say -1;
+            }
+        }
+    }
+    _block_number_set(_block_number() + 1);
+    say free_addr + 2;
+}
+
+float rmem(float pointer)
+{
+    var block_addr = pointer - 2;
+    _block_free_set(block_addr, true);
+    _block_fusion_right(block_addr);
+    _block_fusion_right(_previous_block_addr(block_addr));
+    _block_number_set(_block_number() - 1);
+}
 ```
