@@ -95,12 +95,13 @@ namespace Lahda.Tests
         [Theory]
         [InlineData("{ for(var i = 0; i < 5; i = i + 1) print i; }")]
         [InlineData("{ for(var i = 0; i < 5; i = i + 1) { var x = 2; x = x + 2; } }")]
-        [InlineData("{ var y = 2; var x = 1; while(y < 5) { var x = x * 5; y = y + 1; } }")]
+        [InlineData("{ var y = 2; var x = 1; while(y < 5) { x = x * 5; y = y + 1; } }")]
         [InlineData("{ do { var x = 1 + 2; } while(3); }")]
         [InlineData("{ do { var yo = 2; } until(5 == 5); }")]
         [InlineData("{ do { var mdr = 2 / 2 % 5; } forever; }")]
         [InlineData("{ var i = 0; do i = i + 1; forever; }")]
         [InlineData("{ var i = 0; do i = i + 1; while(i < 5); }")]
+        [InlineData("{ var i = 0; var a = 5; while(i) a = 2; }")]
         public void Parser_should_parse_loops(string content)
         {
             var parser = GetParser(content);

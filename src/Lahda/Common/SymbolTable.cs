@@ -27,7 +27,7 @@ namespace Lahda.Common
         public T DefineSymbol<T>(T symbol)
             where T : AbstractSymbol
         {
-            if (CurrentScope.ContainsKey(symbol.Name))
+            if (Exists(symbol.Name))
             {
                 throw new InvalidOperationException($"identifier already defined for {symbol.Name}");
             }
@@ -38,6 +38,21 @@ namespace Lahda.Common
             }
             CurrentScope.Add(symbol.Name, symbol);
             return symbol;
+        }
+
+        private bool Exists(string identifier)
+        {
+            var i = m_scopes.Count - 1;
+            while (i >= 0)
+            {
+                var scope = GetScope(i);
+                if (scope.ContainsKey(identifier))
+                {
+                    return true;
+                }
+                i--;
+            }
+            return false;
         }
 
         public T Search<T>(string identifier)

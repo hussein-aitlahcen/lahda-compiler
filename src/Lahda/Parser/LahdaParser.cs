@@ -217,15 +217,15 @@ namespace Lahda.Parser
                 z = 2;
             }
         */
-        public ConditionalNode ConditionalExpression() =>
+        public AbstractStatementNode ConditionalExpression() =>
             IdentifiedCond(id =>
             {
                 var condition = ParentheseEnclosed(ArithmeticExpression);
-                var trueStmts = NextStatement();
+                var trueStmts = Scoped(NextStatement);
                 AbstractStatementNode falseStmts = new BlockNode();
                 if (IsKeyword(KeywordType.Else))
                 {
-                    falseStmts = NextStatement();
+                    falseStmts = Scoped(NextStatement);
                 }
                 return new ConditionalNode(id, condition, trueStmts, falseStmts);
             });
