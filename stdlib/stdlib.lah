@@ -197,3 +197,90 @@ float pow(float a, float b)
     }
     say a;
 }
+
+float linked_list_next(float list)
+    say :list + 1;
+
+float linked_list_next_set(float list, float value)
+    :list + 1 = value;
+
+float linked_list_value(float list)
+    say :list;
+
+float linked_list_value_set(float list, float value)
+    :list = value;
+
+float linked_list_size(float list)
+{
+    if(linked_list_next(list) == 0)
+        say 1;
+    say 1 + linked_list_size(linked_list_next(list));
+}
+
+float linked_list_last(float list)
+{
+    while(linked_list_next(list) != 0)
+    {
+        list = linked_list_next(list);
+    }
+    say list;
+}
+
+float linked_list_new(float value) 
+{
+    var list = bmem(2);
+    linked_list_value_set(list, value);
+    say list;
+}
+
+float linked_list_add(float list, float value)
+{
+    var last = linked_list_last(list);
+    var new = linked_list_new(value);
+    linked_list_next_set(last, new);
+}
+
+float linked_list_remove(float list, float index)
+{
+    var length = linked_list_size(list);
+    if(index >= length)
+        say list;
+
+    if(index == 0)
+    {
+        var next = linked_list_next(list);
+        rmem(list);
+        say next;
+    }
+    else
+    {   
+        var before = list;
+        for(var i = 0; i < index - 1; i++)
+        {
+            before = linked_list_next(before);
+        }
+        if(index == length - 1)
+        {
+            rmem(linked_list_next(before));
+            linked_list_next_set(before, 0);
+        }
+        else 
+        {
+            var removable = linked_list_next(before);
+            var next = linked_list_next(removable);
+            linked_list_next_set(before, next);
+            rmem(removable);
+        }
+        say list;
+    }
+}
+
+float linked_list_display_values(float list)
+{
+    var length = linked_list_size(list);
+    for(var i = 0; i < length; i++)
+    {
+        print linked_list_value(list);
+        list = linked_list_next(list);
+    }
+}
