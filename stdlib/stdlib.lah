@@ -1,3 +1,6 @@
+float _mem_struct_size()
+    say 2;
+    
 float _mem_is_init()
     say :(:0);
 
@@ -11,7 +14,7 @@ float _block_number_set(float value)
     :((:0) + 1) = value;
 
 float _first_block_addr()
-    say (:0) + 2;
+    say (:0) + _mem_struct_size();
 
 float _mem_size()
     say 50000 - _first_block_addr();
@@ -170,9 +173,8 @@ float init_array(float pointer, float dim_pointer, float dim_pointer_size)
 
 float display(float pointer)
 {
-    var block_addr = pointer - 2;
-    var block_size = _block_size(block_addr);
-    for(var i = 0; i < block_size; i++) 
+    var pointer_size = size(pointer);
+    for(var i = 0; i < pointer_size; i++) 
     {
         print :pointer + i;
     }
@@ -184,12 +186,10 @@ float pow(float a, float b)
     {
         say 1;
     }
-    
     if(b < 0)
     {
         say 1 / pow(a, -b);
     }
-
     while(b > 0)
     {
         a *= a;
@@ -259,18 +259,17 @@ float linked_list_remove(float list, float index)
         {
             before = linked_list_next(before);
         }
+        var removable = linked_list_next(before);
         if(index == length - 1)
         {
-            rmem(linked_list_next(before));
             linked_list_next_set(before, 0);
         }
         else 
         {
-            var removable = linked_list_next(before);
             var next = linked_list_next(removable);
             linked_list_next_set(before, next);
-            rmem(removable);
         }
+        rmem(removable);
         say list;
     }
 }
