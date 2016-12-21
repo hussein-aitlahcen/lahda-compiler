@@ -3,6 +3,7 @@ namespace Lahda
     public enum KeywordType
     {
         None,
+        Crash,
         If,
         Else,
         For,

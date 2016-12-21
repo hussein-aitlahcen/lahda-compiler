@@ -4,6 +4,7 @@ namespace Lahda.Lexer.Impl
     {
         public LahdaLexer(CompilationConfiguration configuration) : base(configuration)
         {
+            configuration.AddKeyword(KeywordType.Crash, "crash");
             configuration.AddKeyword(KeywordType.If, "if");
             configuration.AddKeyword(KeywordType.Else, "else");
             configuration.AddKeyword(KeywordType.Break, "break");

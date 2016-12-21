@@ -3,6 +3,7 @@ namespace Lahda.Parser
     public enum NodeType
     {
         None,
+        Crash,
         Root,
         Drop,
         MultiExpression,

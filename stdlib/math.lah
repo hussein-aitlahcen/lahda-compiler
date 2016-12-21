@@ -1,0 +1,37 @@
+float pow(float a, float b)
+{
+    if(b == 0)
+    {
+        say 1;
+    }
+    if(b < 0)
+    {
+        say 1 / pow(a, -b);
+    }
+    say a * pow(a, b - 1);
+}
+
+float abs(float a)
+{
+    if(a < 0) 
+    {
+        a = -a;
+    }
+    say a;
+}
+
+float sqrt(float a)
+{
+    if(a < 0)
+    {
+        crash "only positive for square";
+    }
+    var i = 1;
+    var b = a;
+    while(abs(i - b) > 0.0000001)
+    {
+        i = (i + b) / 2;
+        b = a / i;
+    }
+    say i;
+}

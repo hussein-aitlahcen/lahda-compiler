@@ -321,10 +321,26 @@ namespace Lahda.Codegen
                     );
                     break;
 
+                case NodeType.Crash:
+                    Write("halt");
+                    break;
+
                 case NodeType.Print:
-                    var print = (PrintNode)node;
-                    Generate(print.Expression);
-                    Write("out.f");
+                    if (node is PrintExpressionNode)
+                    {
+                        var printe = (PrintExpressionNode)node;
+                        Generate(printe.Expression);
+                        Write("out.f");
+                    }
+                    else
+                    {
+                        var prints = (PrintStringNode)node;
+                        foreach (var c in prints.Content)
+                        {
+                            Write($"push.i {(int)c}");
+                            Write("out.c");
+                        }
+                    }
                     Write("push.i 10");
                     Write("out.c");
                     break;
@@ -426,7 +442,7 @@ namespace Lahda.Codegen
         private string Set(int index) => $"set {index}";
         private string Get(int index) => $"get {index}";
         private string Pushi(int x = 0) => $"push.i {x}";
-        private string Pushf(float x = 0) => $"push.f {x}";
+        private string Pushf(float x = 0) => $"push.f {x.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
         private string JumpSpec(char type, string label) => $"jump{type} {label}";
         private string JumpFalse(string label) => JumpSpec('f', label);
         private string Jump(string label) => $"jump {label}";

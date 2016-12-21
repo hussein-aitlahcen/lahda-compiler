@@ -1,10 +1,10 @@
 namespace Lahda.Parser.Impl
 {
-    public sealed class PrintNode : AbstractStatementNode
+    public sealed class PrintExpressionNode : AbstractStatementNode
     {
         public AbstractExpressionNode Expression { get; private set; }
 
-        public PrintNode(AbstractExpressionNode expression) : base(NodeType.Print)
+        public PrintExpressionNode(AbstractExpressionNode expression) : base(NodeType.Print)
         {
             Expression = expression;
         }

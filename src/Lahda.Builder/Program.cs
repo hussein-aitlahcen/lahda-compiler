@@ -17,7 +17,9 @@ namespace ConsoleApplication
                 Console.WriteLine("wtf dude give some files: <output> <file.lah...>");
             var outname = args[0];
             var sources = new string[]{
-                "stdlib/stdlib.lah"
+                "stdlib/mem.lah",
+                "stdlib/collections.lah",
+                "stdlib/math.lah"
             }.Concat(args.Skip(1));
 
             foreach (var file in args.Skip(1))

@@ -79,8 +79,9 @@ namespace Lahda.Parser
         {
             switch (GetKeywordType())
             {
+                case KeywordType.Crash: return Statement(CrashExpression);
                 case KeywordType.Var: return Statement(DeclarationExpression);
-                case KeywordType.Print: return Statement(PrintExpression);
+                case KeywordType.Print: return Statement(() => PrintExpression());
                 case KeywordType.While: return WhileExpression();
                 case KeywordType.For: return ForExpression();
                 case KeywordType.Do: return Statement(DoExpression);
@@ -188,16 +189,16 @@ namespace Lahda.Parser
                         var stmt = NextStatement();
                         return new BlockNode
                         (
-                            data.Initialization, 
+                            data.Initialization,
                             new LoopNode
                             (
-                                loopId, 
-                                condId, 
-                                data.StopCondition, 
-                                data.Iteration, 
+                                loopId,
+                                condId,
+                                data.StopCondition,
+                                data.Iteration,
                                 new BlockNode
                                 (
-                                    stmt, 
+                                    stmt,
                                     Symbols.CurrentScope.ReleaseStatements
                                 )
                             )
@@ -254,16 +255,35 @@ namespace Lahda.Parser
                     return new BlockNode(new BlockNode(statements), Symbols.CurrentScope.ReleaseStatements);
                 }));
 
-        public PrintNode PrintExpression() => new PrintNode(ArithmeticExpression());
+        public AbstractStatementNode CrashExpression()
+        {
+            if (IsType(TokenType.String))
+            {
+                return new BlockNode(PrintExpression("FAILURE: "), new CrashNode());
+            }
+            return new CrashNode();
+        }
+
+        public AbstractStatementNode PrintExpression(string prefix = "")
+        {
+            if (IsType(TokenType.String))
+            {
+                return new PrintStringNode(prefix + GetTokenValueOrThrow<string>(TokenType.String, "unknow string type ?? wtf"));
+            }
+            return new PrintExpressionNode(ArithmeticExpression());
+        }
 
         public CallNode CallExpression(FunctionSymbol symbol)
             => ParentheseEnclosed(() =>
             {
                 var expressions = new List<AbstractExpressionNode>();
-                while (!IsOperatorUnconsumed(OperatorType.ParentheseClose))
+                if (!IsOperatorUnconsumed(OperatorType.ParentheseClose))
                 {
-                    expressions.Add(ArithmeticExpression());
-                    if (IsOperator(OperatorType.Comma)) ;
+                    do
+                    {
+                        expressions.Add(ArithmeticExpression());
+                    }
+                    while (IsOperator(OperatorType.Comma));
                 }
                 if (expressions.Count != symbol.ParameterCount)
                 {
@@ -281,23 +301,26 @@ namespace Lahda.Parser
                 var arguments = ParentheseEnclosed(() =>
                 {
                     var args = new List<AbstractExpressionNode>();
-                    while (IsType(TokenType.Keyword))
+                    if (IsType(TokenType.Keyword))
                     {
-                        var argType = GetObjectType(GetKeywordType());
-                        switch (argType)
+                        do
                         {
-                            case ObjectType.Floating:
-                                args.Add(new AddressableIdentifierNode(DefinePrimitiveSymbol()));
-                                break;
+                            var argType = GetObjectType(GetKeywordType());
+                            switch (argType)
+                            {
+                                case ObjectType.Floating:
+                                    args.Add(new AddressableIdentifierNode(DefinePrimitiveSymbol()));
+                                    break;
 
-                            case ObjectType.Pointer:
-                                args.Add(new AddressableIdentifierNode(DefineArraySymbol()));
-                                break;
+                                case ObjectType.Pointer:
+                                    args.Add(new AddressableIdentifierNode(DefineArraySymbol()));
+                                    break;
 
-                            default:
-                                throw new InvalidOperationException("unknow argument type");
+                                default:
+                                    throw new InvalidOperationException("unknow argument type");
+                            }
                         }
-                        if (IsOperator(OperatorType.Comma)) ;
+                        while (IsOperator(OperatorType.Comma));
                     }
                     return args;
                 });
@@ -324,7 +347,7 @@ namespace Lahda.Parser
             {
                 var arrSymbol = Symbols.DefineSymbol(new ArrayVariableSymbol(ident));
                 var indexExpressions = new List<AbstractExpressionNode>();
-                while(IsOperatorUnconsumed(OperatorType.BracketOpen))
+                while (IsOperatorUnconsumed(OperatorType.BracketOpen))
                 {
                     indexExpressions.Add(BracketEnclosed(ArithmeticExpression));
                 }
@@ -740,7 +763,7 @@ namespace Lahda.Parser
             {
                 return GetTokenValueOrThrow<T>(type, "");
             }
-            catch (Exception e)
+            catch (Exception)
             {
             }
             return def;
