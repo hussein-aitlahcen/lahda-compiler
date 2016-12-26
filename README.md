@@ -98,19 +98,6 @@ You can notice that the *`:`* is the equivalent of *`*`* in C, dereferencing a p
 float player_struct_size()
     say 4;
 
-float player_new(float id, float level, float x, float y)
-{
-    var player = bmem(player_struct_size());
-    :player = id;
-    :player + 1 = level;
-    :player + 2 = x;
-    :player + 3 = y;
-    say player;
-}
-
-float player_destroy(float player)
-    rmem(player);
-
 float player_id(float player)
     say :player;
 
@@ -131,6 +118,19 @@ float player_y(float player)
 
 float player_y_set(float player, float y)
     :player + 3 = y;
+
+float player_new(float id, float level, float x, float y)
+{
+    var player = bmem(player_struct_size());
+    :player = id;
+    player_level_set(player, level);
+    player_x_set(player, x);
+    player_y_set(player, y);
+    say player;
+}
+
+float player_destroy(float player)
+    rmem(player);
 
 float player_distance(float playerOne, float playerTwo) 
 {
