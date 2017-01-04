@@ -9,16 +9,16 @@ float init_array(float pointer, float dim_pointer, float dim_pointer_size)
     {
         var child_pointer = pointer + current_dim + (i * child_size);
         child_size = init_array(child_pointer, dim_pointer + 1, dim_pointer_size - 1);
-        :pointer + i = child_pointer;
+        :(pointer + i) = child_pointer;
     }
     say current_dim * (child_size + 1);
 }
 
 float linked_list_next(float list)
-    say :list + 1;
+    say :(list + 1);
 
 float _linked_list_next_set(float list, float value)
-    :list + 1 = value;
+    :(list + 1) = value;
 
 float linked_list_value(float list)
     say :list;

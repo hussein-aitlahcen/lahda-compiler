@@ -4,10 +4,12 @@ float pow(float a, float b)
     {
         say 1;
     }
+
     if(b < 0)
     {
         say 1 / pow(a, -b);
     }
+
     say a * pow(a, b - 1);
 }
 
@@ -17,6 +19,7 @@ float abs(float a)
     {
         a = -a;
     }
+
     say a;
 }
 
@@ -24,8 +27,9 @@ float sqrt(float a)
 {
     if(a < 0)
     {
-        crash "only positive for square";
+        crash "square negative";
     }
+
     var i = 1;
     var b = a;
     while(abs(i - b) > 0.0000001)
@@ -33,5 +37,31 @@ float sqrt(float a)
         i = (i + b) / 2;
         b = a / i;
     }
+    
     say i;
+}
+
+float euclidian_div(float a, float b)
+{
+	var res = 0;
+	
+	if (a < 0)
+		if (b > 0)
+			say -euclidian_div(-a, b) - 1;
+		else
+			say euclidian_div(-a, -b) + 1;
+	if (b < 0)
+		say -euclidian_div(a, -b);
+	
+	while (a >= b)
+	{
+		a -= b;
+		res++;
+	}
+	say res;
+}
+
+float mod(float a, float b)
+{
+	say a - b * euclidian_div(a, b);
 }

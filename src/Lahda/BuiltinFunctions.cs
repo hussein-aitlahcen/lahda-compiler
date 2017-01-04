@@ -43,5 +43,20 @@ namespace Lahda
                 a,
                 b
             );
+
+        public static AbstractStatementNode Mod(AbstractExpressionNode a, AbstractExpressionNode b) =>
+            new CallNode
+            (
+                new FunctionIdentifierNode(new FunctionSymbol("mod")),
+                a,
+                b
+            );
+        public static AbstractStatementNode EuclidianDiv(AbstractExpressionNode a, AbstractExpressionNode b) =>
+            new CallNode
+            (
+                new FunctionIdentifierNode(new FunctionSymbol("euclidian_div")),
+                a,
+                b
+            );
     }
 }

@@ -175,9 +175,15 @@ namespace Lahda.Codegen
                         case OperatorType.Greater:
                             Write("cmpgt.f");
                             break;
+                        case OperatorType.EuclidianDiv:
+                            Write(Drop());
+                            Write(Drop());
+                            Generate(BuiltinFunctions.EuclidianDiv(operation.LeftOperand, operation.RightOperand));
+                            break;
                         case OperatorType.Mod:
-                            // TODO: modulo
-
+                            Write(Drop());
+                            Write(Drop());
+                            Generate(BuiltinFunctions.Mod(operation.LeftOperand, operation.RightOperand));
                             break;
                         case OperatorType.Pow:
                             Write(Drop());
@@ -256,7 +262,8 @@ namespace Lahda.Codegen
                                     init_array(a, b, 2);
                             */
                             Generate(BuiltinFunctions.InitArray(dcl.Identifier, tempVar, new LiteralNode(indexExpressions.Count)));
-                            Write(Drop());
+                            Write(Get(tempVar.Symbol.Pointer));
+                            Generate(BuiltinFunctions.RecoverMemory(tempVar));
                             break;
                     }
                     break;

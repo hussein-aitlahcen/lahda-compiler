@@ -27,19 +27,15 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 ### Supported types
 
 * Floating
-
-* Comming soon
-  * String
-  * Struct
-  * Array
+* Array
 
 ### Arithmetic Expressions
 
 * **Floating** = `(((([0-9]+\\.[0-9]*)|([0-9]*\\.[0-9]+))([Ee][+-]?[0-9]+)?)|([0-9]+([Ee][+-]?[0-9]+)))`
 * **Bool** = *`true`* | *`false`*
-* **Primitive** = Floating | Bool | Identifier | `-` Primitive | *`!`* Primitive | *`(`* Expression *`)`* | *`:`* Expression
-* **Divisible** = Primitive (*`/`* Divisible)?
-* **Multiplicative** = Divisible (`*` Multiplicative)?
+* **Primitive** = Floating | Bool | Identifier | `-` Primitive | *`!`* Primitive | *`(`* Expression *`)`* | *`:`* Primitive
+* **Divisible** = Primitive ((`^` | *`/`* | `//`) Divisible)?
+* **Multiplicative** = Divisible ((`*` | `%`) Multiplicative)?
 * **Additive** = Multiplicative ((*`+`* | *`-`*) Additive)?
 * **BitwiseAnd** = Additive (*`&`* BitwiseAnd)?
 * **BitwiseOr** = BitwiseAnd (*`|`* BitwiseOr)?
@@ -52,9 +48,9 @@ MSC project (compilation course) at **Polytech Paris-Sud**.
 
 * **StatementEnd** = *`;`*
 * **Identifier** = `([A-Za-z][A-Za-z0-9_]*)`
-* **BinaryOperator** = *`+=`* | *`-=`* | *`/=`* | *`%=`* | *`^=`* | *`=`* | `*=`
+* **BinaryOperator** = *`+=`* | *`-=`* | *`/=`* | *`%=`* | *`^=`* | *`=`* | `*=` | *`//=`*
 * **UnaryOperator** = *`++`* | *`--`*
-* **Assignation** = (Identifier | *`:`* Expression ) (BinaryOperator Expression | UnaryOperator)
+* **Assignation** = (Identifier | *`:`* Primitive ) (BinaryOperator Expression | UnaryOperator)
 * **Declaration** = *`var`* Identifier *`=`* Expression
 * **LoopControl** = `continue` | `break`
 * **Inline** = (Assignation | Declaration | LoopControl) StatementEnd
@@ -81,6 +77,8 @@ float display(float ptr);
 float pow(float a, float b);
 float sqrt(float a);
 float abs(float a);
+float mod(float a, float b);
+float euclidian_div(float a, float b);
 
 // collections.lah
 float linked_list_new(float firstValue);
@@ -101,28 +99,31 @@ float player_struct_size()
 float player_id(float player)
     say :player;
 
+float player_id_set(float player, float id)
+    :player = id;
+
 float player_level(float player)
-    say :player + 1;
+    say :(player + 1);
 
 float player_level_set(float player, float level)
-    :player + 1 = level;
+    :(player + 1) = level;
 
 float player_x(float player)
-    say :player + 2;
+    say :(player + 2);
 
 float player_x_set(float player, float x)
-    :player + 2 = x;
+    :(player + 2) = x;
 
 float player_y(float player)
-    say :player + 3;
+    say :(player + 3);
 
 float player_y_set(float player, float y)
-    :player + 3 = y;
+    :(player + 3) = y;
 
 float player_new(float id, float level, float x, float y)
 {
     var player = bmem(player_struct_size());
-    :player = id;
+    player_id_set(player, id);
     player_level_set(player, level);
     player_x_set(player, x);
     player_y_set(player, y);

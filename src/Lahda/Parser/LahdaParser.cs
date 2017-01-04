@@ -123,7 +123,7 @@ namespace Lahda.Parser
                 IdentifiedLoop(loopId =>
                     IdentifiedCond(condId =>
                     {
-                        var stmt = new BlockNode(NextStatement(), Symbols.CurrentScope.ReleaseStatements);
+                        var stmt = NextStatement();
                         switch (GetKeywordType())
                         {
                             case KeywordType.While: return DoWhileExpression(loopId, condId, stmt);
@@ -155,7 +155,7 @@ namespace Lahda.Parser
                     IdentifiedCond(condId =>
                     {
                         var stopCondition = ParentheseEnclosed(ArithmeticExpression);
-                        var stmt = new BlockNode(NextStatement(), Symbols.CurrentScope.ReleaseStatements);
+                        var stmt = NextStatement();
                         return new LoopNode(id, condId, stopCondition, stmt);
                     })));
 
@@ -196,11 +196,7 @@ namespace Lahda.Parser
                                 condId,
                                 data.StopCondition,
                                 data.Iteration,
-                                new BlockNode
-                                (
-                                    stmt,
-                                    Symbols.CurrentScope.ReleaseStatements
-                                )
+                                stmt
                             )
                         );
                     }));
@@ -252,7 +248,7 @@ namespace Lahda.Parser
                     {
                         statements.Add(NextStatement());
                     }
-                    return new BlockNode(new BlockNode(statements), Symbols.CurrentScope.ReleaseStatements);
+                    return new BlockNode(statements);
                 }));
 
         public AbstractStatementNode CrashExpression()
@@ -325,7 +321,7 @@ namespace Lahda.Parser
                     return args;
                 });
                 symb.ParameterCount = arguments.Count;
-                var stmt = new BlockNode(NextStatement(), Symbols.CurrentScope.ReleaseStatements);
+                var stmt = NextStatement();
                 return new FunctionNode(returnType, new FunctionIdentifierNode(symb), arguments, stmt);
             });
         }
@@ -370,6 +366,8 @@ namespace Lahda.Parser
                 OperatorType.AddAssign,
                 OperatorType.SubAssign,
                 OperatorType.MulAssign,
+                OperatorType.PowAssign,
+                OperatorType.EuclidianDivAssign,
                 OperatorType.DivAssign,
                 OperatorType.ModAssign,
                 OperatorType.Increment,
@@ -407,6 +405,14 @@ namespace Lahda.Parser
                     expression = new OperationNode(OperatorType.Mod, left, ArithmeticExpression());
                     break;
 
+                case OperatorType.PowAssign:
+                    expression = new OperationNode(OperatorType.Pow, left, ArithmeticExpression());
+                    break;
+
+                case OperatorType.EuclidianDivAssign:
+                    expression = new OperationNode(OperatorType.EuclidianDiv, left, ArithmeticExpression());
+                    break;
+
                 case OperatorType.Increment:
                     expression = OperationNode.Increment(left);
                     break;
@@ -428,7 +434,7 @@ namespace Lahda.Parser
             AbstractExpressionNode left;
             if (IsOperator(OperatorType.Dereference))
             {
-                left = ArithmeticExpression();
+                left = ArithmeticPrimitive();
             }
             else
             {
@@ -497,9 +503,13 @@ namespace Lahda.Parser
         {
             switch (level)
             {
+                case ArithmeticLevel.Powerable:
+                    yield return OperatorType.Pow;
+                    break;
+
                 case ArithmeticLevel.Divisible:
                     yield return OperatorType.Div;
-                    yield return OperatorType.Pow;
+                    yield return OperatorType.EuclidianDiv;
                     break;
 
                 case ArithmeticLevel.Multiplicative:
@@ -644,7 +654,7 @@ namespace Lahda.Parser
                     // :E
                     else if (IsOperator(OperatorType.Dereference))
                     {
-                        return new DereferenceNode(ArithmeticExpression());
+                        return new DereferenceNode(ArithmeticPrimitive());
                     }
                     break;
             }
@@ -685,8 +695,8 @@ namespace Lahda.Parser
         {
             Symbols.PushScope();
             T value = fun();
-            Symbols.PopScope();
-            return value;
+            var releaseStatements = Symbols.PopScope().ReleaseStatements;
+            return new BlockNode(value, releaseStatements);
         }
 
         public T IdentifiedCond<T>(Func<int, T> fun) =>
